@@ -1,5 +1,4 @@
--- [[ SoloCheat - V1 TOTAL CONTROL ]] --
--- [[ STABLE + SLIDERS + KEYBINDS + KILL SWITCH ]] --
+-- [[ SoloCheat - V1 TOTAL CONTROL + KEY FIX ]] --
 
 repeat task.wait() until game:IsLoaded()
 
@@ -13,7 +12,7 @@ local Mouse = LocalPlayer:GetMouse()
 
 -- [[ CONFIGURATION ]] --
 local Config = {
-    Active = true, -- Variable pour tout stopper
+    Active = true,
     Silent = false, FOV = 200, ShowFOV = true, TargetPart = "Head",
     Fly = false, FlySpeed = 2, NoClip = false,
     ESP_Box = false, ESP_HealthText = false,
@@ -21,11 +20,13 @@ local Config = {
     TP_Key = Enum.KeyCode.E,
     MenuKey = Enum.KeyCode.K,
     CorrectKey = "SoloCheat-5f9e2b81a4c7d3e0f91a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0",
+    Discord = "https://discord.gg/VDNw9dXnJe", -- LIEN ICI
     AccentColor = Color3.fromRGB(0, 255, 150),
     BgColor = Color3.fromRGB(15, 15, 15),
     SecColor = Color3.fromRGB(25, 25, 25)
 }
 
+-- [[ DRAG ]] --
 local function MakeDraggable(topbar, object)
     local dragging, dragStart, startPos
     topbar.InputBegan:Connect(function(input)
@@ -42,6 +43,7 @@ local function MakeDraggable(topbar, object)
     end)
 end
 
+-- [[ CIBLAGE ]] --
 local function GetClosestTarget()
     if not Config.Active then return nil end
     local target, nearest = nil, Config.FOV
@@ -60,7 +62,7 @@ local function GetClosestTarget()
     return target
 end
 
--- [[ INTERFACE ]] --
+-- [[ INTERFACE MAIN ]] --
 local function LaunchCheat()
     local MainUI = Instance.new("ScreenGui", CoreGui); MainUI.Name = "SoloV1_Final"
     local MainFrame = Instance.new("Frame", MainUI); MainFrame.Size = UDim2.new(0, 580, 0, 430); MainFrame.Position = UDim2.new(0.5, -290, 0.5, -215); MainFrame.BackgroundColor3 = Config.BgColor; MainFrame.BorderSizePixel = 0
@@ -70,22 +72,20 @@ local function LaunchCheat()
     Instance.new("UICorner", TopBar); MakeDraggable(TopBar, MainFrame)
 
     local Title = Instance.new("TextLabel", TopBar); Title.Size = UDim2.new(1, -120, 1, 0); Title.Position = UDim2.new(0, 15, 0, 0); Title.Text = "SoloCheat - V1 PRO"; Title.TextColor3 = Color3.new(1, 1, 1); Title.Font = "GothamBold"; Title.BackgroundTransparency = 1; Title.TextXAlignment = 0
-    
-    local MiniHint = Instance.new("TextLabel", TopBar); MiniHint.Size = UDim2.new(0, 60, 1, 0); MiniHint.Position = UDim2.new(1, -100, 0, 0); MiniHint.Text = "[ "..Config.MenuKey.Name.." ]"; MiniHint.TextColor3 = Config.AccentColor; MiniHint.Font = "GothamBold"; MiniHint.BackgroundTransparency = 1
+    local MiniHint = Instance.new("TextLabel", TopBar); MiniHint.Size = UDim2.new(0, 70, 1, 0); MiniHint.Position = UDim2.new(1, -110, 0, 0); MiniHint.Text = "[ "..Config.MenuKey.Name.." ]"; MiniHint.TextColor3 = Config.AccentColor; MiniHint.Font = "GothamBold"; MiniHint.BackgroundTransparency = 1
 
-    -- BOUTON FERMER (X)
     local CloseBtn = Instance.new("TextButton", TopBar); CloseBtn.Size = UDim2.new(0, 30, 0, 30); CloseBtn.Position = UDim2.new(1, -35, 0.5, -15); CloseBtn.Text = "X"; CloseBtn.TextColor3 = Color3.fromRGB(255, 80, 80); CloseBtn.Font = "GothamBold"; CloseBtn.BackgroundTransparency = 1; CloseBtn.TextSize = 20
 
     local Sidebar = Instance.new("Frame", MainFrame); Sidebar.Size = UDim2.new(0, 150, 1, -45); Sidebar.Position = UDim2.new(0, 5, 0, 42); Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Instance.new("UICorner", Sidebar)
-    local SideLayout = Instance.new("UIListLayout", Sidebar); SideLayout.Padding = UDim.new(0, 5); SideLayout.HorizontalAlignment = "Center"
     local Container = Instance.new("Frame", MainFrame); Container.Size = UDim2.new(1, -165, 1, -50); Container.Position = UDim2.new(0, 160, 0, 45); Container.BackgroundTransparency = 1
+    Instance.new("UIListLayout", Sidebar).Padding = UDim.new(0, 5)
 
     local function AddTab(name)
         local TabBtn = Instance.new("TextButton", Sidebar); TabBtn.Size = UDim2.new(0.9, 0, 0, 40); TabBtn.Text = name; TabBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30); TabBtn.TextColor3 = Color3.new(1, 1, 1); TabBtn.Font = "Gotham"; Instance.new("UICorner", TabBtn)
         local Page = Instance.new("ScrollingFrame", Container); Page.Size = UDim2.new(1, 0, 1, 0); Page.Visible = false; Page.BackgroundTransparency = 1; Page.ScrollBarThickness = 0
         Instance.new("UIListLayout", Page).Padding = UDim.new(0, 8)
         TabBtn.MouseButton1Click:Connect(function()
-            for _, v in pairs(Container:GetChildren()) do v.Visible = false end
+            for _, v in pairs(Container:GetChildren()) do if v:IsA("ScrollingFrame") then v.Visible = false end end
             for _, b in pairs(Sidebar:GetChildren()) do if b:IsA("TextButton") then b.TextColor3 = Color3.new(1, 1, 1) end end
             Page.Visible = true; TabBtn.TextColor3 = Config.AccentColor
         end)
@@ -140,25 +140,20 @@ local function LaunchCheat()
     end)
     AddKey(TSettings, "TP KEY", Config, "TP_Key"); AddKey(TSettings, "MENU KEY", Config, "MenuKey")
 
-    -- [[ LOGIQUE DE FIN ]] --
     local Circle = Drawing.new("Circle"); Circle.Thickness = 1.5; Circle.Color = Config.AccentColor
     CloseBtn.MouseButton1Click:Connect(function()
-        Config.Active = false; Config.Fly = false; Config.NoClip = false; Config.ESP_Box = false; Config.ESP_HealthText = false
-        Circle:Remove(); MainUI:Destroy()
+        Config.Active = false; Circle:Remove(); MainUI:Destroy()
     end)
 
-    -- [[ BOUCLE MOTEUR ]] --
     RunService.RenderStepped:Connect(function()
         if not Config.Active then return end
         Circle.Visible = Config.ShowFOV; Circle.Radius = Config.FOV; Circle.Position = UIS:GetMouseLocation()
-        
         if Config.Silent and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
             local t = GetClosestTarget()
             if t and mousemoverel then
                 local p = Camera:WorldToViewportPoint(t.Position); mousemoverel(p.X - UIS:GetMouseLocation().X, p.Y - UIS:GetMouseLocation().Y)
             end
         end
-
         local char = LocalPlayer.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
             if Config.Fly then
@@ -182,12 +177,21 @@ local function LaunchCheat()
     TCombat.Visible = true
 end
 
+-- [[ KEY SYSTEM ]] --
 local function StartKey()
-    local KeyUI = Instance.new("ScreenGui", CoreGui); local KFrame = Instance.new("Frame", KeyUI); KFrame.Size = UDim2.new(0, 420, 0, 280); KFrame.Position = UDim2.new(0.5, -210, 0.5, -140); KFrame.BackgroundColor3 = Config.BgColor; Instance.new("UICorner", KFrame); Instance.new("UIStroke", KFrame).Color = Config.AccentColor
+    local KeyUI = Instance.new("ScreenGui", CoreGui); local KFrame = Instance.new("Frame", KeyUI); KFrame.Size = UDim2.new(0, 420, 0, 300); KFrame.Position = UDim2.new(0.5, -210, 0.5, -150); KFrame.BackgroundColor3 = Config.BgColor; Instance.new("UICorner", KFrame); Instance.new("UIStroke", KFrame).Color = Config.AccentColor
     local T = Instance.new("TextLabel", KFrame); T.Size = UDim2.new(1, 0, 0, 70); T.Text = "SoloCheat"; T.TextColor3 = Config.AccentColor; T.Font = "GothamBold"; T.TextSize = 35; T.BackgroundTransparency = 1
-    local B = Instance.new("TextBox", KFrame); B.Size = UDim2.new(0.8, 0, 0, 45); B.Position = UDim2.new(0.1, 0, 0.35, 0); B.BackgroundColor3 = Config.SecColor; B.TextColor3 = Color3.new(1, 1, 1); B.PlaceholderText = "Clé V1..."; Instance.new("UICorner", B)
-    local V = Instance.new("TextButton", KFrame); V.Size = UDim2.new(0.4, -5, 0, 45); V.Position = UDim2.new(0.1, 0, 0.65, 0); V.BackgroundColor3 = Config.AccentColor; V.Text = "VALIDER"; V.Font = "GothamBold"; Instance.new("UICorner", V)
+    local B = Instance.new("TextBox", KFrame); B.Size = UDim2.new(0.8, 0, 0, 45); B.Position = UDim2.new(0.1, 0, 0.35, 0); B.BackgroundColor3 = Config.SecColor; B.TextColor3 = Color3.new(1, 1, 1); B.PlaceholderText = "Entrez la clé..."; Instance.new("UICorner", B)
+    
+    local V = Instance.new("TextButton", KFrame); V.Size = UDim2.new(0.4, -5, 0, 45); V.Position = UDim2.new(0.1, 0, 0.55, 0); V.BackgroundColor3 = Config.AccentColor; V.Text = "VALIDER"; V.Font = "GothamBold"; Instance.new("UICorner", V)
+    
+    -- BOUTON DISCORD RE-AJOUTÉ
+    local G = Instance.new("TextButton", KFrame); G.Size = UDim2.new(0.4, -5, 0, 45); G.Position = UDim2.new(0.5, 5, 0.55, 0); G.BackgroundColor3 = Color3.fromRGB(40, 40, 40); G.Text = "[ Get Key ]"; G.TextColor3 = Color3.new(1, 1, 1); G.Font = "GothamBold"; Instance.new("UICorner", G)
+    
+    local Dlbl = Instance.new("TextLabel", KFrame); Dlbl.Size = UDim2.new(1, 0, 0, 30); Dlbl.Position = UDim2.new(0, 0, 0.8, 0); Dlbl.Text = "Discord: " .. Config.Discord; Dlbl.TextColor3 = Color3.fromRGB(150, 150, 150); Dlbl.Font = "Gotham"; Dlbl.TextSize = 12; Dlbl.BackgroundTransparency = 1
+
     V.MouseButton1Click:Connect(function() if B.Text == Config.CorrectKey then KeyUI:Destroy(); LaunchCheat() end end)
+    G.MouseButton1Click:Connect(function() setclipboard(Config.Discord) end)
     MakeDraggable(KFrame, KFrame)
 end
 
