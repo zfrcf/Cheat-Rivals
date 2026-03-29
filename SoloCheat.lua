@@ -1,5 +1,5 @@
--- [[ SoloCheat - V1 OMNIPOTENT // ELITE TARGETING & SLIDE MOVEMENT ]] --
--- [[ TEAM CHECK | ANTI-CORPSE | DISTANCE BASED | SLIDE JUMP BOOST ]] --
+-- [[ SoloCheat - V1 OMNIPOTENT // ELITE TARGETING & MOVEMENT ]] --
+-- [[ TEAM CHECK | ANTI-CORPSE | DISTANCE BASED | JUMP BOOST ]] --
 
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
@@ -23,8 +23,8 @@ local Config = {
     Fly = false,
     FlySpeed = 5,
     NoClip = false,
-    SlideJump = false, -- Le Slide Jump Boost
-    SlidePower = 150, -- Puissance de la propulsion horizontale
+    JumpBoost = false, -- NOUVEAU
+    JumpPower = 100, -- Puissance du boost
     MenuKey = "K",
     AccentColor = Color3.fromRGB(0, 255, 150),
     TargetPart = "Head"
@@ -112,7 +112,7 @@ local function MainCheat()
     local T1 = Tab("Combat"); local T2 = Tab("Visuals"); local T3 = Tab("Misc"); local T4 = Tab("Settings")
     Toggle(T1, "SILENT AIM (ELITE)", "Silent"); Toggle(T1, "TRIGGERBOT", "Triggerbot")
     Toggle(T2, "ESP BOXES", "ESP_Box"); Toggle(T2, "ESP NAME & HP", "ESP_HealthText")
-    Toggle(T3, "FLY MODE", "Fly"); Toggle(T3, "NOCLIP", "NoClip"); Toggle(T3, "SLIDE JUMP BOOST", "SlideJump")
+    Toggle(T3, "FLY MODE", "Fly"); Toggle(T3, "NOCLIP", "NoClip"); Toggle(T3, "SLIDE JUMP BOOST", "JumpBoost")
     
     local FlySpdBtn = Instance.new("TextButton", T4); FlySpdBtn.Size = UDim2.new(1,-10,0,40); FlySpdBtn.BackgroundColor3 = Color3.fromRGB(30,30,30); FlySpdBtn.Font = "Code"; FlySpdBtn.Text = "FLY SPEED : x"..(Config.FlySpeed); Instance.new("UICorner", FlySpdBtn)
     FlySpdBtn.MouseButton1Click:Connect(function() Config.FlySpeed = (Config.FlySpeed >= 50 and 5 or Config.FlySpeed + 10); FlySpdBtn.Text = "FLY SPEED : x"..Config.FlySpeed end)
@@ -137,18 +137,12 @@ local function MainCheat()
         end
     end)
 
-    -- SLIDE JUMP BOOST LOGIC (Propulsion vers l'avant)
+    -- JUMP BOOST LOGIC
     UIS.JumpRequest:Connect(function()
-        if Config.Active and Config.SlideJump and LocalPlayer.Character then
+        if Config.Active and Config.JumpBoost and LocalPlayer.Character then
             local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            local hum = LocalPlayer.Character:FindFirstChild("Humanoid")
-            if hrp and hum then
-                -- On récupère la direction où le joueur veut aller
-                local moveDir = hum.MoveDirection
-                if moveDir.Magnitude > 0 then
-                    -- On applique une vélocité vers l'avant + un léger petit up
-                    hrp.AssemblyLinearVelocity = moveDir * Config.SlidePower + Vector3.new(0, 30, 0)
-                end
+            if hrp then
+                hrp.Velocity = hrp.Velocity + (LocalPlayer.Character.Humanoid.MoveDirection * Config.JumpPower) + Vector3.new(0, 20, 0)
             end
         end
     end)
