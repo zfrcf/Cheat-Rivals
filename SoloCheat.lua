@@ -1,5 +1,5 @@
--- [[ SoloCheat - V1 CYBER-GHOST ]] --
--- [[ ENGINE: STABLE | STYLE: HACKER NEON | ROUNDED ]] --
+-- [[ SoloCheat - V1 CYBER-GHOST // NO-TEAM-KILL ]] --
+-- [[ ENGINE: ANTI-TEAM | ANTI-VOID | HACKER STYLE ]] --
 
 repeat task.wait() until game:IsLoaded()
 
@@ -9,7 +9,6 @@ local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
-local Mouse = LocalPlayer:GetMouse()
 
 -- [[ CONFIGURATION ]] --
 local Config = {
@@ -22,14 +21,43 @@ local Config = {
     MenuKey = Enum.KeyCode.K,
     CorrectKey = "SoloCheat-5f9e2b81a4c7d3e0f91a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0",
     Discord = "https://discord.gg/VDNw9dXnJe",
-    -- STYLE HACKER
-    AccentColor = Color3.fromRGB(0, 255, 65), -- Vert Matrix
-    BgColor = Color3.fromRGB(5, 5, 5),        -- Noir Profond
-    SecColor = Color3.fromRGB(15, 15, 15),    -- Gris Sombre
-    Rounded = UDim.new(0, 12)                 -- Coins arrondis
+    AccentColor = Color3.fromRGB(0, 255, 65),
+    BgColor = Color3.fromRGB(5, 5, 5),
+    SecColor = Color3.fromRGB(15, 15, 15),
+    Rounded = UDim.new(0, 12)
 }
 
--- [[ UTILITAIRES ]] --
+-- [[ FILTRE CIBLAGE (IGNORE TEAMS & DEAD) ]] --
+local function GetClosestTarget()
+    local target, nearestDistance = nil, math.huge
+    for _, p in pairs(Players:GetPlayers()) do
+        -- Vérification: Pas moi, même équipe, personnage vivant
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild(Config.TargetPart) then
+            -- CHECK ÉQUIPE
+            if p.Team ~= LocalPlayer.Team or tostring(p.Team) == "Neutral" then 
+                local hum = p.Character:FindFirstChild("Humanoid")
+                local root = p.Character:FindFirstChild("HumanoidRootPart")
+                
+                -- CHECK VIE (Pas de cadavres)
+                if hum and hum.Health > 0 and root then
+                    local pos, vis = Camera:WorldToViewportPoint(p.Character[Config.TargetPart].Position)
+                    local screenDist = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
+                    
+                    -- CHECK FOV
+                    if vis and screenDist <= Config.FOV then
+                        local worldDist = (LocalPlayer.Character.HumanoidRootPart.Position - root.Position).Magnitude
+                        if worldDist < nearestDistance then 
+                            nearestDistance = worldDist; target = p.Character[Config.TargetPart] 
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return target
+end
+
+-- [[ LE RESTE DE L'INTERFACE RESTE IDENTIQUE ]] --
 local function MakeDraggable(topbar, object)
     local dragging, dragStart, startPos
     topbar.InputBegan:Connect(function(input)
@@ -44,21 +72,6 @@ local function MakeDraggable(topbar, object)
             object.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
     end)
-end
-
-local function GetClosestTarget()
-    local target, nearestDistance = nil, math.huge
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild(Config.TargetPart) and p.Character:FindFirstChild("HumanoidRootPart") then
-            local pos, vis = Camera:WorldToViewportPoint(p.Character[Config.TargetPart].Position)
-            local screenDist = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
-            if vis and screenDist <= Config.FOV then
-                local worldDist = (LocalPlayer.Character.HumanoidRootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
-                if worldDist < nearestDistance then nearestDistance = worldDist; target = p.Character[Config.TargetPart] end
-            end
-        end
-    end
-    return target
 end
 
 local function CreateESP(p)
@@ -76,29 +89,25 @@ local function CreateESP(p)
             if lbl.Visible then 
                 local hum = char:FindFirstChild("Humanoid")
                 lbl.Text = "> " .. p.Name:upper() .. " [" .. (hum and math.floor(hum.Health) or "0") .. "]" 
+                -- ESP change de couleur si allié
+                if p.Team == LocalPlayer.Team then box.Color3 = Color3.new(0,0,1) else box.Color3 = Config.AccentColor end
             end
         end)
     end
     p.CharacterAdded:Connect(SetupESP); if p.Character then SetupESP(p.Character) end
 end
 
--- [[ INTERFACE HACKER ]] --
 local function LaunchCheat()
     local MainUI = Instance.new("ScreenGui", CoreGui); MainUI.Name = "SoloV1_Cyber"
-    
     local MainFrame = Instance.new("Frame", MainUI); MainFrame.Size = UDim2.new(0, 580, 0, 430); MainFrame.Position = UDim2.new(0.5, -290, 0.5, -215); MainFrame.BackgroundColor3 = Config.BgColor; MainFrame.BackgroundTransparency = 0.1
     Instance.new("UICorner", MainFrame).CornerRadius = Config.Rounded
-    local Glow = Instance.new("UIStroke", MainFrame); Glow.Color = Config.AccentColor; Glow.Thickness = 2; Glow.ApplyStrokeMode = "Border"
-
+    local Glow = Instance.new("UIStroke", MainFrame); Glow.Color = Config.AccentColor; Glow.Thickness = 2
     local TopBar = Instance.new("Frame", MainFrame); TopBar.Size = UDim2.new(1, 0, 0, 45); TopBar.BackgroundColor3 = Config.SecColor; TopBar.BackgroundTransparency = 0.5
     Instance.new("UICorner", TopBar).CornerRadius = Config.Rounded; MakeDraggable(TopBar, MainFrame)
-    
     local Title = Instance.new("TextLabel", TopBar); Title.Size = UDim2.new(1, -120, 1, 0); Title.Position = UDim2.new(0, 20, 0, 0); Title.Text = "SOLOCHIET // V1.SYS"; Title.TextColor3 = Config.AccentColor; Title.Font = "Code"; Title.TextSize = 18; Title.BackgroundTransparency = 1; Title.TextXAlignment = 0
     local CloseBtn = Instance.new("TextButton", TopBar); CloseBtn.Size = UDim2.new(0, 35, 0, 35); CloseBtn.Position = UDim2.new(1, -40, 0.5, -17); CloseBtn.Text = "X"; CloseBtn.TextColor3 = Color3.fromRGB(255, 50, 50); CloseBtn.BackgroundTransparency = 1; CloseBtn.Font = "Code"; CloseBtn.TextSize = 22
-
     local Sidebar = Instance.new("Frame", MainFrame); Sidebar.Size = UDim2.new(0, 150, 1, -60); Sidebar.Position = UDim2.new(0, 10, 0, 55); Sidebar.BackgroundTransparency = 1
     Instance.new("UIListLayout", Sidebar).Padding = UDim.new(0, 8)
-
     local Container = Instance.new("Frame", MainFrame); Container.Size = UDim2.new(1, -180, 1, -65); Container.Position = UDim2.new(0, 170, 0, 55); Container.BackgroundTransparency = 1
 
     local function AddTab(name)
@@ -160,7 +169,10 @@ local function LaunchCheat()
         Circle.Visible = Config.ShowFOV; Circle.Radius = Config.FOV; Circle.Position = UIS:GetMouseLocation()
         if Config.Silent and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
             local t = GetClosestTarget()
-            if t then local p = Camera:WorldToViewportPoint(t.Position); mousemoverel((p.X - UIS:GetMouseLocation().X)/2, (p.Y - UIS:GetMouseLocation().Y)/2) end
+            if t then 
+                local p = Camera:WorldToViewportPoint(t.Position)
+                mousemoverel((p.X - UIS:GetMouseLocation().X)/2, (p.Y - UIS:GetMouseLocation().Y)/2) 
+            end
         end
         local char = LocalPlayer.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
@@ -178,16 +190,15 @@ local function LaunchCheat()
     Players.PlayerAdded:Connect(CreateESP); TCombat.Visible = true
 end
 
--- [[ KEY SYSTEM HACKER ]] --
+-- [[ KEY SYSTEM ]] --
 local function StartKey()
     local KeyUI = Instance.new("ScreenGui", CoreGui)
     local KF = Instance.new("Frame", KeyUI); KF.Size = UDim2.new(0, 420, 0, 260); KF.Position = UDim2.new(0.5, -210, 0.5, -130); KF.BackgroundColor3 = Config.BgColor; Instance.new("UICorner", KF).CornerRadius = Config.Rounded
     local GS = Instance.new("UIStroke", KF); GS.Color = Config.AccentColor; GS.Thickness = 2
-    local L = Instance.new("TextLabel", KF); L.Size = UDim2.new(1, 0, 0, 60); L.Text = "ACCESS_DENIED // AUTH_REQ"; L.TextColor3 = Config.AccentColor; L.Font = "Code"; L.TextSize = 20; L.BackgroundTransparency = 1
-    local B = Instance.new("TextBox", KF); B.Size = UDim2.new(0.8, 0, 0, 45); B.Position = UDim2.new(0.1, 0, 0.35, 0); B.PlaceholderText = "ENTER_TOKEN_V1..."; B.BackgroundColor3 = Config.SecColor; B.TextColor3 = Color3.new(1,1,1); B.Font = "Code"
-    Instance.new("UICorner", B); Instance.new("UIStroke", B).Color = Color3.fromRGB(50, 50, 50)
-    local V = Instance.new("TextButton", KF); V.Size = UDim2.new(0.4, -5, 0, 45); V.Position = UDim2.new(0.1, 0, 0.65, 0); V.Text = "[ RUN.EXE ]"; V.BackgroundColor3 = Color3.fromRGB(20, 40, 20); V.TextColor3 = Config.AccentColor; V.Font = "Code"
-    Instance.new("UICorner", V); local G = Instance.new("TextButton", KF); G.Size = UDim2.new(0.4, -5, 0, 45); G.Position = UDim2.new(0.5, 5, 0.65, 0); G.Text = "[ GET_KEY ]"; G.BackgroundColor3 = Config.SecColor; G.TextColor3 = Color3.new(0.8, 0.8, 0.8); G.Font = "Code"; Instance.new("UICorner", G)
+    local L = Instance.new("TextLabel", KF); L.Size = UDim2.new(1, 0, 0, 60); L.Text = "AUTH_REQUIRED // SOLOCHIET"; L.TextColor3 = Config.AccentColor; L.Font = "Code"; L.TextSize = 20; L.BackgroundTransparency = 1
+    local B = Instance.new("TextBox", KF); B.Size = UDim2.new(0.8, 0, 0, 45); B.Position = UDim2.new(0.1, 0, 0.35, 0); B.PlaceholderText = "TOKEN_ID..."; B.BackgroundColor3 = Config.SecColor; B.TextColor3 = Color3.new(1,1,1); B.Font = "Code"
+    Instance.new("UICorner", B); local V = Instance.new("TextButton", KF); V.Size = UDim2.new(0.4, -5, 0, 45); V.Position = UDim2.new(0.1, 0, 0.65, 0); V.Text = "[ EXECUTE ]"; V.BackgroundColor3 = Color3.fromRGB(20, 40, 20); V.TextColor3 = Config.AccentColor; V.Font = "Code"; Instance.new("UICorner", V)
+    local G = Instance.new("TextButton", KF); G.Size = UDim2.new(0.4, -5, 0, 45); G.Position = UDim2.new(0.5, 5, 0.65, 0); G.Text = "[ GET_KEY ]"; G.BackgroundColor3 = Config.SecColor; G.TextColor3 = Color3.new(0.8, 0.8, 0.8); G.Font = "Code"; Instance.new("UICorner", G)
     V.MouseButton1Click:Connect(function() if B.Text == Config.CorrectKey then KeyUI:Destroy(); LaunchCheat() end end)
     G.MouseButton1Click:Connect(function() setclipboard(Config.Discord) end)
 end
