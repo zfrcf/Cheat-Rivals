@@ -1,5 +1,5 @@
--- [[ SoloCheat - V1 OMNIPOTENT // NO-REMOVAL FULL EDITION ]] --
--- [[ ALL FEATURES INTEGRATED + DRAGGABLE + CLOSE + SPEED SETTINGS ]] --
+-- [[ SoloCheat - V1 OMNIPOTENT // HYBRID PRO EDITION ]] --
+-- [[ ESP PRO + AIMLOCK PRO + TRIGGERBOT + SETTINGS + AUTO-SAVE ]] --
 
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
@@ -16,19 +16,20 @@ local FileName = "SoloCheat_Key.txt"
 
 local Config = {
     Active = false,
-    Aimbot = false,
-    Triggerbot = false,
+    Silent = false, -- Aimlock Pro
     FOV = 200,
+    ShowFOV = true,
+    Triggerbot = false,
     ESP_Box = false,
-    ESP_Health = false,
+    ESP_HealthText = false,
     Fly = false,
     FlySpeed = 2,
     NoClip = false,
     MenuKey = "K",
     TP_Key = "E",
-    TP_Mode = "Disabled", -- Disabled, Forward, Mouse
-    TP_Distance = 50,
-    AccentColor = Color3.fromRGB(0, 255, 150)
+    TP_Mode = "Disabled",
+    AccentColor = Color3.fromRGB(0, 255, 150),
+    TargetPart = "Head"
 }
 
 -- [[ UI HELPERS (DRAG) ]] --
@@ -49,17 +50,17 @@ local function MakeDraggable(frame, parent)
     end)
 end
 
--- [[ CORE LOGIC ]] --
+-- [[ CORE FUNCTIONS (PRO VERSION) ]] --
 local function GetClosestTarget()
     local target, nearest = nil, Config.FOV
     for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild(Config.TargetPart) then
             local hum = p.Character:FindFirstChild("Humanoid")
             if hum and hum.Health > 0 and (p.Team ~= LocalPlayer.Team or tostring(p.Team) == "Neutral") then
-                local pos, vis = Camera:WorldToViewportPoint(p.Character.Head.Position)
+                local pos, vis = Camera:WorldToViewportPoint(p.Character[Config.TargetPart].Position)
                 if vis then
                     local dist = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
-                    if dist < nearest then nearest = dist; target = p.Character.Head end
+                    if dist < nearest then nearest = dist; target = p.Character[Config.TargetPart] end
                 end
             end
         end
@@ -67,17 +68,34 @@ local function GetClosestTarget()
     return target
 end
 
+-- [[ ESP SYSTEM PRO ]] --
 local function CreatePlayerESP(p)
     p.CharacterAdded:Connect(function(char)
-        task.wait(0.5)
-        local box = Instance.new("BoxHandleAdornment", char); box.Name = "SoloBox"; box.Adornee = char; box.AlwaysOnTop = true; box.Size = Vector3.new(4, 6, 1); box.Color3 = Config.AccentColor; box.Transparency = 0.6; box.ZIndex = 10
-        local bill = Instance.new("BillboardGui", char:WaitForChild("Head")); bill.Name = "SoloHealth"; bill.Size = UDim2.new(0, 100, 0, 40); bill.AlwaysOnTop = true; bill.ExtentsOffset = Vector3.new(0, 3, 0)
-        local label = Instance.new("TextLabel", bill); label.Size = UDim2.new(1, 0, 1, 0); label.BackgroundTransparency = 1; label.Font = "Code"; label.TextSize = 14; label.TextStrokeTransparency = 0
-        local conn; conn = RunService.RenderStepped:Connect(function()
-            if not char or not char.Parent or not Config.Active then if box then box:Destroy() end; if bill then bill:Destroy() end; conn:Disconnect(); return end
-            local enemy = (p.Team ~= LocalPlayer.Team or tostring(p.Team) == "Neutral")
-            box.Visible = Config.ESP_Box and enemy; label.Visible = Config.ESP_Health and enemy
-            if label.Visible then label.Text = p.Name .. " [" .. math.floor(char.Humanoid.Health) .. "]"; label.TextColor3 = Color3.fromHSV(char.Humanoid.Health/100 * 0.35, 1, 1) end
+        task.wait(1)
+        local head = char:WaitForChild("Head")
+        local hum = char:WaitForChild("Humanoid")
+        
+        local box = Instance.new("BoxHandleAdornment", char)
+        box.Adornee = char; box.AlwaysOnTop = true; box.Size = Vector3.new(4,6,1)
+        box.Color3 = Config.AccentColor; box.Transparency = 0.7; box.ZIndex = 10
+        
+        local bill = Instance.new("BillboardGui", head)
+        bill.Size = UDim2.new(0, 150, 0, 60); bill.AlwaysOnTop = true; bill.ExtentsOffset = Vector3.new(0, 3.5, 0)
+        
+        local label = Instance.new("TextLabel", bill)
+        label.Size = UDim2.new(1, 0, 1, 0); label.BackgroundTransparency = 1; label.Font = "GothamBold"; label.TextSize = 13; label.TextStrokeTransparency = 0
+        
+        local conn; conn = RunService.Heartbeat:Connect(function()
+            if not char or not char.Parent or not Config.Active then 
+                box:Destroy(); bill:Destroy(); conn:Disconnect(); return 
+            end
+            local isEnemy = (p.Team ~= LocalPlayer.Team or tostring(p.Team) == "Neutral")
+            box.Visible = Config.ESP_Box and isEnemy
+            label.Visible = Config.ESP_HealthText and isEnemy
+            if label.Visible then
+                label.Text = p.Name .. "\nHP: " .. math.floor(hum.Health)
+                label.TextColor3 = Color3.fromHSV(hum.Health/100 * 0.35, 1, 1)
+            end
         end)
     end)
 end
@@ -88,9 +106,8 @@ local function MainCheat()
     local Main = Instance.new("Frame", UI); Main.Size = UDim2.new(0, 540, 0, 420); Main.Position = UDim2.new(0.5, -270, 0.5, -210); Main.BackgroundColor3 = Color3.fromRGB(12,12,12); Main.BorderSizePixel = 0
     Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Config.AccentColor
 
-    -- BARRE DE TITRE DRAGGABLE + CROIX
     local TopBar = Instance.new("Frame", Main); TopBar.Size = UDim2.new(1, 0, 0, 35); TopBar.BackgroundColor3 = Color3.fromRGB(20,20,20); Instance.new("UICorner", TopBar)
-    local Title = Instance.new("TextLabel", TopBar); Title.Size = UDim2.new(1, -40, 1, 0); Title.Position = UDim2.new(0, 12, 0, 0); Title.Text = "SOLO MASTER V1 - PREMIUM"; Title.TextColor3 = Color3.new(1,1,1); Title.Font = "Code"; Title.TextXAlignment = 0; Title.BackgroundTransparency = 1
+    local Title = Instance.new("TextLabel", TopBar); Title.Size = UDim2.new(1, -40, 1, 0); Title.Position = UDim2.new(0, 12, 0, 0); Title.Text = "SoloCheat - V1 OMNIPOTENT"; Title.TextColor3 = Color3.new(1,1,1); Title.Font = "Code"; Title.TextXAlignment = 0; Title.BackgroundTransparency = 1
     local CloseBtn = Instance.new("TextButton", TopBar); CloseBtn.Size = UDim2.new(0, 35, 0, 35); CloseBtn.Position = UDim2.new(1, -35, 0, 0); CloseBtn.Text = "X"; CloseBtn.TextColor3 = Color3.new(1, 0, 0); CloseBtn.BackgroundTransparency = 1; CloseBtn.Font = "Code"; CloseBtn.TextSize = 22
     
     MakeDraggable(TopBar, Main)
@@ -114,23 +131,15 @@ local function MainCheat()
 
     local T1 = Tab("Combat"); local T2 = Tab("Visuals"); local T3 = Tab("Misc"); local T4 = Tab("Settings")
     
-    Toggle(T1, "LOCK AIM (R-CLICK)", "Aimbot")
+    Toggle(T1, "SILENT AIM (R-CLICK)", "Silent")
+    Toggle(T1, "SHOW FOV CIRCLE", "ShowFOV")
     Toggle(T1, "TRIGGERBOT", "Triggerbot")
-    Toggle(T2, "ESP BOX 3D", "ESP_Box")
-    Toggle(T2, "ESP NAME & HP", "ESP_Health")
+    Toggle(T2, "ESP BOXES", "ESP_Box")
+    Toggle(T2, "ESP NAME & HP", "ESP_HealthText")
     Toggle(T3, "FLY MODE", "Fly")
     Toggle(T3, "NOCLIP", "NoClip")
 
-    -- MULTI-TP SELECTOR (RECONSTRUIT)
-    local Modes = {"Disabled", "Forward", "Mouse"}
-    local TpBtn = Instance.new("TextButton", T3); TpBtn.Size = UDim2.new(1, -10, 0, 40); TpBtn.BackgroundColor3 = Color3.fromRGB(40,40,40); TpBtn.Font = "Code"; TpBtn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", TpBtn)
-    TpBtn.MouseButton1Click:Connect(function()
-        local current = table.find(Modes, Config.TP_Mode)
-        Config.TP_Mode = Modes[(current % #Modes) + 1]
-        TpBtn.Text = "TP MODE : " .. Config.TP_Mode:upper()
-    end); TpBtn.Text = "TP MODE : DISABLED"
-
-    -- SETTINGS TABS
+    -- Settings: Fly Speed
     local FlySpdBtn = Instance.new("TextButton", T4); FlySpdBtn.Size = UDim2.new(1,-10,0,40); FlySpdBtn.BackgroundColor3 = Color3.fromRGB(30,30,30); FlySpdBtn.Font = "Code"; FlySpdBtn.Text = "FLY SPEED : x1"; Instance.new("UICorner", FlySpdBtn)
     local speeds = {2, 5, 10, 25, 50}
     FlySpdBtn.MouseButton1Click:Connect(function()
@@ -142,25 +151,37 @@ local function MainCheat()
     local DiscBtn = Instance.new("TextButton", T4); DiscBtn.Size = UDim2.new(1,-10,0,40); DiscBtn.Text = "JOIN DISCORD"; DiscBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242); DiscBtn.Font = "Code"; Instance.new("UICorner", DiscBtn)
     DiscBtn.MouseButton1Click:Connect(function() setclipboard(DiscordLink); DiscBtn.Text = "COPIED !"; task.wait(1); DiscBtn.Text = "JOIN DISCORD" end)
 
-    -- [[ LOOPS ]] --
+    -- [[ PRO LOGIC LOOP ]] --
+    local FOVCircle = Drawing.new("Circle"); FOVCircle.Thickness = 1; FOVCircle.Color = Config.AccentColor; FOVCircle.Transparency = 1; FOVCircle.Visible = false
+
     RunService.RenderStepped:Connect(function()
-        if not Config.Active then return end
-        if Config.Aimbot and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+        if not Config.Active then FOVCircle.Visible = false; return end
+        
+        -- FOV Update
+        FOVCircle.Visible = Config.ShowFOV; FOVCircle.Radius = Config.FOV; FOVCircle.Position = UIS:GetMouseLocation()
+        
+        -- Silent Aim Pro
+        if Config.Silent and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
             local t = GetClosestTarget()
             if t and mousemoverel then
                 local pos = Camera:WorldToViewportPoint(t.Position)
                 mousemoverel(pos.X - UIS:GetMouseLocation().X, pos.Y - UIS:GetMouseLocation().Y)
             end
         end
+
+        -- Triggerbot
         if Config.Triggerbot and Mouse.Target and Mouse.Target.Parent:FindFirstChild("Humanoid") then
             local p = Players:GetPlayerFromCharacter(Mouse.Target.Parent)
             if p and (p.Team ~= LocalPlayer.Team or tostring(p.Team) == "Neutral") then mouse1click() end
         end
-        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if hrp and Config.Fly then
+
+        -- Fly
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") and Config.Fly then
+            local hrp = char.HumanoidRootPart
             hrp.Velocity = Vector3.new(0, 0.1, 0)
-            local m = (UIS:IsKeyDown("W") and Camera.CFrame.LookVector or Vector3.new()) + (UIS:IsKeyDown("S") and -Camera.CFrame.LookVector or Vector3.new())
-            if m.Magnitude > 0 then hrp.CFrame = hrp.CFrame + (m * Config.FlySpeed) end
+            local dir = (UIS:IsKeyDown("W") and Camera.CFrame.LookVector or Vector3.new()) + (UIS:IsKeyDown("S") and -Camera.CFrame.LookVector or Vector3.new())
+            if dir.Magnitude > 0 then hrp.CFrame = hrp.CFrame + (dir * Config.FlySpeed) end
         end
     end)
 
@@ -168,10 +189,8 @@ local function MainCheat()
     
     UIS.InputBegan:Connect(function(i, g)
         if g then return end
-        if i.KeyCode.Name == Config.TP_Key and LocalPlayer.Character then 
-            local hrp = LocalPlayer.Character.HumanoidRootPart
-            if Config.TP_Mode == "Forward" then hrp.CFrame = hrp.CFrame + (Camera.CFrame.LookVector * Config.TP_Distance)
-            elseif Config.TP_Mode == "Mouse" then hrp.CFrame = CFrame.new(Mouse.Hit.Position + Vector3.new(0,3,0)) end
+        if i.KeyCode == Enum.KeyCode.E and LocalPlayer.Character then 
+            LocalPlayer.Character.HumanoidRootPart.CFrame = Mouse.Hit * CFrame.new(0,3,0)
         elseif i.KeyCode.Name == Config.MenuKey then Main.Visible = not Main.Visible end
     end)
 
