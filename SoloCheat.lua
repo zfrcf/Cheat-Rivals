@@ -1,5 +1,5 @@
--- [[ SoloCheat - V1 OMNIPOTENT // PRO HYBRID EDITION ]] --
--- [[ LOCK AIM | ADORNMENT ESP | TRIGGERBOT | AUTO-SAVE ]] --
+-- [[ SoloCheat - V1 OMNIPOTENT // NO-REMOVAL FULL EDITION ]] --
+-- [[ ALL FEATURES INTEGRATED + DRAGGABLE + CLOSE + SPEED SETTINGS ]] --
 
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
@@ -17,7 +17,7 @@ local FileName = "SoloCheat_Key.txt"
 local Config = {
     Active = false,
     Aimbot = false,
-    Triggerbot = false, -- NOUVEAU
+    Triggerbot = false,
     FOV = 200,
     ESP_Box = false,
     ESP_Health = false,
@@ -26,20 +26,30 @@ local Config = {
     NoClip = false,
     MenuKey = "K",
     TP_Key = "E",
-    TP_Mode = "Disabled", -- Modes: "Disabled", "Forward", "Mouse"
+    TP_Mode = "Disabled", -- Disabled, Forward, Mouse
+    TP_Distance = 50,
     AccentColor = Color3.fromRGB(0, 255, 150)
 }
 
--- [[ SAUVEGARDE ]] --
-local function SaveKey(key) if writefile then writefile(FileName, key) end end
-local function LoadSavedKey() if isfile and isfile(FileName) then return readfile(FileName) end return nil end
-
--- Nettoyage
-for _, v in pairs(CoreGui:GetChildren()) do
-    if v.Name == "SoloCheat_Master" or v.Name == "SoloKeySystem" then v:Destroy() end
+-- [[ UI HELPERS (DRAG) ]] --
+local function MakeDraggable(frame, parent)
+    parent = parent or frame
+    local dragging, dragStart, startPos
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true; dragStart = input.Position; startPos = parent.Position
+            input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+        end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
+            parent.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
 end
 
--- [[ CORE FUNCTIONS ]] --
+-- [[ CORE LOGIC ]] --
 local function GetClosestTarget()
     local target, nearest = nil, Config.FOV
     for _, p in pairs(Players:GetPlayers()) do
@@ -57,55 +67,34 @@ local function GetClosestTarget()
     return target
 end
 
--- [[ ESP BOX ADORNMENT ]] --
 local function CreatePlayerESP(p)
     p.CharacterAdded:Connect(function(char)
         task.wait(0.5)
-        if not char:FindFirstChild("Humanoid") then return end
-        
-        local box = Instance.new("BoxHandleAdornment")
-        box.Name = "SoloBox"
-        box.Parent = char
-        box.Adornee = char
-        box.AlwaysOnTop = true
-        box.Size = Vector3.new(4, 6, 1)
-        box.Color3 = Config.AccentColor
-        box.Transparency = 0.6
-        box.ZIndex = 10
-
-        local bill = Instance.new("BillboardGui", char:WaitForChild("Head"))
-        bill.Name = "SoloHealth"
-        bill.Size = UDim2.new(0, 100, 0, 40)
-        bill.AlwaysOnTop = true
-        bill.ExtentsOffset = Vector3.new(0, 3, 0)
-        local label = Instance.new("TextLabel", bill)
-        label.Size = UDim2.new(1, 0, 1, 0)
-        label.BackgroundTransparency = 1
-        label.Font = "Code"
-        label.TextSize = 14
-        label.TextStrokeTransparency = 0
-
+        local box = Instance.new("BoxHandleAdornment", char); box.Name = "SoloBox"; box.Adornee = char; box.AlwaysOnTop = true; box.Size = Vector3.new(4, 6, 1); box.Color3 = Config.AccentColor; box.Transparency = 0.6; box.ZIndex = 10
+        local bill = Instance.new("BillboardGui", char:WaitForChild("Head")); bill.Name = "SoloHealth"; bill.Size = UDim2.new(0, 100, 0, 40); bill.AlwaysOnTop = true; bill.ExtentsOffset = Vector3.new(0, 3, 0)
+        local label = Instance.new("TextLabel", bill); label.Size = UDim2.new(1, 0, 1, 0); label.BackgroundTransparency = 1; label.Font = "Code"; label.TextSize = 14; label.TextStrokeTransparency = 0
         local conn; conn = RunService.RenderStepped:Connect(function()
-            if not char or not char.Parent or not Config.Active then 
-                box:Destroy(); bill:Destroy(); conn:Disconnect()
-                return 
-            end
-            local isEnemy = (p.Team ~= LocalPlayer.Team or tostring(p.Team) == "Neutral")
-            box.Visible = Config.ESP_Box and isEnemy
-            label.Visible = Config.ESP_Health and isEnemy
-            if label.Visible then
-                label.Text = p.Name .. " [" .. math.floor(char.Humanoid.Health) .. "]"
-                label.TextColor3 = Color3.fromHSV(char.Humanoid.Health/100 * 0.35, 1, 1)
-            end
+            if not char or not char.Parent or not Config.Active then if box then box:Destroy() end; if bill then bill:Destroy() end; conn:Disconnect(); return end
+            local enemy = (p.Team ~= LocalPlayer.Team or tostring(p.Team) == "Neutral")
+            box.Visible = Config.ESP_Box and enemy; label.Visible = Config.ESP_Health and enemy
+            if label.Visible then label.Text = p.Name .. " [" .. math.floor(char.Humanoid.Health) .. "]"; label.TextColor3 = Color3.fromHSV(char.Humanoid.Health/100 * 0.35, 1, 1) end
         end)
     end)
 end
 
--- [[ MENU PRINCIPAL ]] --
+-- [[ MAIN UI ]] --
 local function MainCheat()
     local UI = Instance.new("ScreenGui", CoreGui); UI.Name = "SoloCheat_Master"
-    local Main = Instance.new("Frame", UI); Main.Size = UDim2.new(0, 520, 0, 420); Main.Position = UDim2.new(0.5, -260, 0.5, -210); Main.BackgroundColor3 = Color3.fromRGB(15,15,15); Main.BorderSizePixel = 0
+    local Main = Instance.new("Frame", UI); Main.Size = UDim2.new(0, 540, 0, 420); Main.Position = UDim2.new(0.5, -270, 0.5, -210); Main.BackgroundColor3 = Color3.fromRGB(12,12,12); Main.BorderSizePixel = 0
     Instance.new("UICorner", Main); Instance.new("UIStroke", Main).Color = Config.AccentColor
+
+    -- BARRE DE TITRE DRAGGABLE + CROIX
+    local TopBar = Instance.new("Frame", Main); TopBar.Size = UDim2.new(1, 0, 0, 35); TopBar.BackgroundColor3 = Color3.fromRGB(20,20,20); Instance.new("UICorner", TopBar)
+    local Title = Instance.new("TextLabel", TopBar); Title.Size = UDim2.new(1, -40, 1, 0); Title.Position = UDim2.new(0, 12, 0, 0); Title.Text = "SOLO MASTER V1 - PREMIUM"; Title.TextColor3 = Color3.new(1,1,1); Title.Font = "Code"; Title.TextXAlignment = 0; Title.BackgroundTransparency = 1
+    local CloseBtn = Instance.new("TextButton", TopBar); CloseBtn.Size = UDim2.new(0, 35, 0, 35); CloseBtn.Position = UDim2.new(1, -35, 0, 0); CloseBtn.Text = "X"; CloseBtn.TextColor3 = Color3.new(1, 0, 0); CloseBtn.BackgroundTransparency = 1; CloseBtn.Font = "Code"; CloseBtn.TextSize = 22
+    
+    MakeDraggable(TopBar, Main)
+    CloseBtn.MouseButton1Click:Connect(function() Config.Active = false; UI:Destroy() end)
 
     local Sidebar = Instance.new("Frame", Main); Sidebar.Size = UDim2.new(0, 140, 1, -50); Sidebar.Position = UDim2.new(0, 10, 0, 45); Sidebar.BackgroundTransparency = 1; Instance.new("UIListLayout", Sidebar).Padding = UDim.new(0, 5)
     local Container = Instance.new("Frame", Main); Container.Size = UDim2.new(1, -170, 1, -50); Container.Position = UDim2.new(0, 160, 0, 45); Container.BackgroundTransparency = 1
@@ -123,7 +112,7 @@ local function MainCheat()
         b.MouseButton1Click:Connect(function() Config[k] = not Config[k]; u() end); u()
     end
 
-    local T1 = Tab("Combat"); local T2 = Tab("Visuals"); local T3 = Tab("Misc"); local T4 = Tab("Discord")
+    local T1 = Tab("Combat"); local T2 = Tab("Visuals"); local T3 = Tab("Misc"); local T4 = Tab("Settings")
     
     Toggle(T1, "LOCK AIM (R-CLICK)", "Aimbot")
     Toggle(T1, "TRIGGERBOT", "Triggerbot")
@@ -132,23 +121,30 @@ local function MainCheat()
     Toggle(T3, "FLY MODE", "Fly")
     Toggle(T3, "NOCLIP", "NoClip")
 
-    -- TP Selector
+    -- MULTI-TP SELECTOR (RECONSTRUIT)
     local Modes = {"Disabled", "Forward", "Mouse"}
-    local TpBtn = Instance.new("TextButton", T3); TpBtn.Size = UDim2.new(1, -10, 0, 45); TpBtn.BackgroundColor3 = Color3.fromRGB(40,40,40); TpBtn.Font = "Code"; TpBtn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", TpBtn)
+    local TpBtn = Instance.new("TextButton", T3); TpBtn.Size = UDim2.new(1, -10, 0, 40); TpBtn.BackgroundColor3 = Color3.fromRGB(40,40,40); TpBtn.Font = "Code"; TpBtn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", TpBtn)
     TpBtn.MouseButton1Click:Connect(function()
         local current = table.find(Modes, Config.TP_Mode)
         Config.TP_Mode = Modes[(current % #Modes) + 1]
         TpBtn.Text = "TP MODE : " .. Config.TP_Mode:upper()
     end); TpBtn.Text = "TP MODE : DISABLED"
 
-    local DiscBtn = Instance.new("TextButton", T4); DiscBtn.Size = UDim2.new(1,-10,0,45); DiscBtn.Text = "JOIN DISCORD"; DiscBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242); DiscBtn.TextColor3 = Color3.new(1,1,1); DiscBtn.Font = "Code"; Instance.new("UICorner", DiscBtn)
-    DiscBtn.MouseButton1Click:Connect(function() setclipboard(DiscordLink); DiscBtn.Text = "LINK COPIED !"; task.wait(2); DiscBtn.Text = "JOIN DISCORD" end)
+    -- SETTINGS TABS
+    local FlySpdBtn = Instance.new("TextButton", T4); FlySpdBtn.Size = UDim2.new(1,-10,0,40); FlySpdBtn.BackgroundColor3 = Color3.fromRGB(30,30,30); FlySpdBtn.Font = "Code"; FlySpdBtn.Text = "FLY SPEED : x1"; Instance.new("UICorner", FlySpdBtn)
+    local speeds = {2, 5, 10, 25, 50}
+    FlySpdBtn.MouseButton1Click:Connect(function()
+        local idx = table.find(speeds, Config.FlySpeed) or 1
+        Config.FlySpeed = speeds[(idx % #speeds) + 1]
+        FlySpdBtn.Text = "FLY SPEED : x" .. (Config.FlySpeed/2)
+    end)
 
-    -- [[ LOGIQUE DE COMBAT ET MOUVEMENT ]] --
+    local DiscBtn = Instance.new("TextButton", T4); DiscBtn.Size = UDim2.new(1,-10,0,40); DiscBtn.Text = "JOIN DISCORD"; DiscBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242); DiscBtn.Font = "Code"; Instance.new("UICorner", DiscBtn)
+    DiscBtn.MouseButton1Click:Connect(function() setclipboard(DiscordLink); DiscBtn.Text = "COPIED !"; task.wait(1); DiscBtn.Text = "JOIN DISCORD" end)
+
+    -- [[ LOOPS ]] --
     RunService.RenderStepped:Connect(function()
         if not Config.Active then return end
-        
-        -- Lock Aim (mousemoverel)
         if Config.Aimbot and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
             local t = GetClosestTarget()
             if t and mousemoverel then
@@ -156,19 +152,10 @@ local function MainCheat()
                 mousemoverel(pos.X - UIS:GetMouseLocation().X, pos.Y - UIS:GetMouseLocation().Y)
             end
         end
-
-        -- Triggerbot
-        if Config.Triggerbot then
-            local target = Mouse.Target
-            if target and target.Parent and target.Parent:FindFirstChild("Humanoid") then
-                local player = Players:GetPlayerFromCharacter(target.Parent)
-                if player and (player.Team ~= LocalPlayer.Team or tostring(player.Team) == "Neutral") then
-                    mouse1click()
-                end
-            end
+        if Config.Triggerbot and Mouse.Target and Mouse.Target.Parent:FindFirstChild("Humanoid") then
+            local p = Players:GetPlayerFromCharacter(Mouse.Target.Parent)
+            if p and (p.Team ~= LocalPlayer.Team or tostring(p.Team) == "Neutral") then mouse1click() end
         end
-
-        -- Fly
         local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         if hrp and Config.Fly then
             hrp.Velocity = Vector3.new(0, 0.1, 0)
@@ -181,12 +168,10 @@ local function MainCheat()
     
     UIS.InputBegan:Connect(function(i, g)
         if g then return end
-        if i.KeyCode.Name == Config.TP_Key then
-            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                if Config.TP_Mode == "Forward" then hrp.CFrame = hrp.CFrame + (Camera.CFrame.LookVector * 50)
-                elseif Config.TP_Mode == "Mouse" then hrp.CFrame = CFrame.new(Mouse.Hit.Position + Vector3.new(0, 3, 0)) end
-            end
+        if i.KeyCode.Name == Config.TP_Key and LocalPlayer.Character then 
+            local hrp = LocalPlayer.Character.HumanoidRootPart
+            if Config.TP_Mode == "Forward" then hrp.CFrame = hrp.CFrame + (Camera.CFrame.LookVector * Config.TP_Distance)
+            elseif Config.TP_Mode == "Mouse" then hrp.CFrame = CFrame.new(Mouse.Hit.Position + Vector3.new(0,3,0)) end
         elseif i.KeyCode.Name == Config.MenuKey then Main.Visible = not Main.Visible end
     end)
 
@@ -196,14 +181,13 @@ end
 -- [[ KEY SYSTEM ]] --
 local function KeySystem()
     local UI = Instance.new("ScreenGui", CoreGui); UI.Name = "SoloKeySystem"
-    local Frame = Instance.new("Frame", UI); Frame.Size = UDim2.new(0, 420, 0, 280); Frame.Position = UDim2.new(0.5, -210, 0.5, -140); Frame.BackgroundColor3 = Color3.fromRGB(15,15,15); Frame.BorderSizePixel = 0
-    Instance.new("UICorner", Frame); Instance.new("UIStroke", Frame).Color = Config.AccentColor
+    local Frame = Instance.new("Frame", UI); Frame.Size = UDim2.new(0, 420, 0, 280); Frame.Position = UDim2.new(0.5, -210, 0.5, -140); Frame.BackgroundColor3 = Color3.fromRGB(15,15,15); Instance.new("UICorner", Frame); Instance.new("UIStroke", Frame).Color = Config.AccentColor
+    MakeDraggable(Frame)
 
     local Title = Instance.new("TextLabel", Frame); Title.Text = "SoloCheat"; Title.Size = UDim2.new(1,0,0,60); Title.TextColor3 = Config.AccentColor; Title.Font = "GothamBold"; Title.TextSize = 25; Title.BackgroundTransparency = 1
-    local Box = Instance.new("TextBox", Frame); Box.Size = UDim2.new(0.9, 0, 0, 45); Box.Position = UDim2.new(0.05, 0, 0.3, 0); Box.BackgroundColor3 = Color3.fromRGB(25,25,25); Box.TextColor3 = Color3.new(1,1,1); Box.PlaceholderText = "Paste Key From Discord..."; Box.Text = ""; Box.Font = "Code"; Box.TextScaled = true; Instance.new("UICorner", Box)
-
-    local ValidBtn = Instance.new("TextButton", Frame); ValidBtn.Size = UDim2.new(0.45, -5, 0, 45); ValidBtn.Position = UDim2.new(0.05, 0, 0.55, 0); ValidBtn.BackgroundColor3 = Config.AccentColor; ValidBtn.Text = "VALIDATE"; ValidBtn.Font = "GothamBold"; Instance.new("UICorner", ValidBtn)
-    local GetBtn = Instance.new("TextButton", Frame); GetBtn.Size = UDim2.new(0.45, -5, 0, 45); GetBtn.Position = UDim2.new(0.5, 5, 0.55, 0); GetBtn.BackgroundColor3 = Color3.fromRGB(50,50,50); GetBtn.Text = "GET KEY"; GetBtn.Font = "GothamBold"; GetBtn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", GetBtn)
+    local Box = Instance.new("TextBox", Frame); Box.Size = UDim2.new(0.9, 0, 0, 45); Box.Position = UDim2.new(0.05, 0, 0.35, 0); Box.BackgroundColor3 = Color3.fromRGB(25,25,25); Box.TextColor3 = Color3.new(1,1,1); Box.PlaceholderText = "Paste Key..."; Box.Text = ""; Box.Font = "Code"; Box.TextScaled = true; Instance.new("UICorner", Box)
+    local ValidBtn = Instance.new("TextButton", Frame); ValidBtn.Size = UDim2.new(0.45, -5, 0, 45); ValidBtn.Position = UDim2.new(0.05, 0, 0.6, 0); ValidBtn.BackgroundColor3 = Config.AccentColor; ValidBtn.Text = "VALIDATE"; ValidBtn.Font = "GothamBold"; Instance.new("UICorner", ValidBtn)
+    local GetBtn = Instance.new("TextButton", Frame); GetBtn.Size = UDim2.new(0.45, -5, 0, 45); GetBtn.Position = UDim2.new(0.5, 5, 0.6, 0); GetBtn.BackgroundColor3 = Color3.fromRGB(50,50,50); GetBtn.Text = "GET KEY"; GetBtn.Font = "GothamBold"; GetBtn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", GetBtn)
 
     local function Launch()
         Config.Active = true; UI:Destroy(); MainCheat()
@@ -212,12 +196,11 @@ local function KeySystem()
     end
 
     GetBtn.MouseButton1Click:Connect(function() setclipboard(DiscordLink); GetBtn.Text = "COPIED !"; task.wait(1); GetBtn.Text = "GET KEY" end)
-    
-    if LoadSavedKey() == CorrectKey then Launch() return end
+    if (isfile and isfile(FileName) and readfile(FileName) == CorrectKey) then Launch() return end
 
     ValidBtn.MouseButton1Click:Connect(function()
-        if Box.Text == CorrectKey then SaveKey(Box.Text); Launch()
-        else ValidBtn.Text = "INVALID"; task.wait(1); ValidBtn.Text = "VALIDATE" end
+        if Box.Text == CorrectKey then if writefile then writefile(FileName, Box.Text) end Launch()
+        else ValidBtn.Text = "WRONG"; task.wait(1); ValidBtn.Text = "VALIDATE" end
     end)
 end
 
