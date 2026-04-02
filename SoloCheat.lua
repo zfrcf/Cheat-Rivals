@@ -1,5 +1,5 @@
 -- [[ SoloCheat - V1 PRO ]] --
--- [[ UPDATE : DISCORD IN SETTINGS | DISTANCE-BASED SILENT AIM ]] --
+-- [[ UPDATE : TP KILL RIVALS | ANTI-RAGDOLL | ADVANCED MOVEMENT ]] --
 
 repeat task.wait() until game:IsLoaded()
 
@@ -8,11 +8,12 @@ local CoreGui = game:GetService("CoreGui")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local TeleportService = game:GetService("TeleportService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
 
--- [[ CONFIGURATION ]] --
+-- [[ CONFIGURATION MISE À JOUR ]] --
 local Config = {
     FileName = "SoloCheat_Key.txt",
     Silent = false,
@@ -26,9 +27,14 @@ local Config = {
     ESP_HealthText = false,
     TP_Key = Enum.KeyCode.E,
     MenuKey = Enum.KeyCode.K,
+    -- NOUVELLES OPTIONS RIVALS
+    TPKill = false,
+    KillOffset = 3,
+    AntiRagdoll = true,
+    WalkSpeedValue = 16,
     CorrectKey = "SoloCheat-5f9e2b81a4c7d3e0f91a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0",
     Discord = "https://discord.gg/VDNw9dXnJe",
-    AccentColor = Color3.fromRGB(0, 255, 150),
+    AccentColor = Color3.fromRGB(255, 0, 80), -- Rouge/Rose Rivals
     BgColor = Color3.fromRGB(15, 15, 15),
     SecColor = Color3.fromRGB(25, 25, 25)
 }
@@ -77,11 +83,9 @@ local function GetClosestTargetByDistance()
                 local enemyPart = p.Character[Config.TargetPart]
                 local pos, vis = Camera:WorldToViewportPoint(enemyPart.Position)
                 
-                -- Vérifie si le joueur est dans le cercle FOV
                 if vis then
                     local fovDist = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
                     if fovDist <= Config.FOV then
-                        -- Calcule la distance réelle (en studs) entre toi et l'ennemi
                         local realDist = (enemyPart.Position - myRoot.Position).Magnitude
                         if realDist < nearestDist then
                             nearestDist = realDist
@@ -113,6 +117,7 @@ local function StartCoreLogic()
         FOVCircle.Radius = Config.FOV
         FOVCircle.Position = UIS:GetMouseLocation()
 
+        -- Silent Aim Logic
         if Config.Silent and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
             local t = GetClosestTargetByDistance()
             if t and (mousemoverel or getgenv().mousemoverel) then
@@ -123,16 +128,43 @@ local function StartCoreLogic()
         end
 
         local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
         if char and char:FindFirstChild("HumanoidRootPart") then
             local hrp = char.HumanoidRootPart
+            
+            -- WalkSpeed Forcée
+            if hum then hum.WalkSpeed = Config.WalkSpeedValue end
+
+            -- Fly Mode
             if Config.Fly then
                 hrp.Velocity = Vector3.new(0, 0.1, 0)
                 local dir = (UIS:IsKeyDown("W") and Camera.CFrame.LookVector or Vector3.new()) + (UIS:IsKeyDown("S") and -Camera.CFrame.LookVector or Vector3.new())
                 if dir.Magnitude > 0 then hrp.CFrame = hrp.CFrame + (dir * Config.FlySpeed) end
             end
+
+            -- Noclip
             if Config.NoClip then
                 for _, v in pairs(char:GetDescendants()) do
                     if v:IsA("BasePart") then v.CanCollide = false end
+                end
+            end
+
+            -- Anti-Ragdoll
+            if Config.AntiRagdoll and hum then
+                hum.PlatformStand = false
+                hum.Sit = false
+                hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+                if hum:GetState() == Enum.HumanoidStateType.Ragdoll then hum:ChangeState(Enum.HumanoidStateType.GettingUp) end
+            end
+
+            -- TP KILL (Rivals Logic)
+            if Config.TPKill then
+                local targetObj = GetClosestTargetByDistance() -- Utilise le système de cible existant
+                if targetObj and targetObj.Parent:FindFirstChild("HumanoidRootPart") then
+                    local targetHRP = targetObj.Parent.HumanoidRootPart
+                    hrp.CFrame = targetHRP.CFrame * CFrame.new(0, 0, Config.KillOffset)
+                    local tool = char:FindFirstChildOfClass("Tool")
+                    if tool then tool:Activate() end
                 end
             end
         end
@@ -178,7 +210,7 @@ local function InitCheat()
     Instance.new("UICorner", Frame); local Stroke = Instance.new("UIStroke", Frame); Stroke.Color = Config.AccentColor; MakeDraggable(Frame)
 
     local TopBar = Instance.new("Frame", Frame); TopBar.Size = UDim2.new(1, 0, 0, 35); TopBar.BackgroundColor3 = Config.SecColor; Instance.new("UICorner", TopBar); MakeDraggable(TopBar, Frame)
-    local Title = Instance.new("TextLabel", TopBar); Title.Size = UDim2.new(1, 0, 1, 0); Title.Text = "  SoloCheat - V1 PRO"; Title.TextColor3 = Color3.new(1, 1, 1); Title.Font = "GothamBold"; Title.BackgroundTransparency = 1; Title.TextXAlignment = "Left"
+    local Title = Instance.new("TextLabel", TopBar); Title.Size = UDim2.new(1, 0, 1, 0); Title.Text = "  SoloCheat - V1 PRO (RIVALS)"; Title.TextColor3 = Color3.new(1, 1, 1); Title.Font = "GothamBold"; Title.BackgroundTransparency = 1; Title.TextXAlignment = "Left"
 
     local CloseBtn = Instance.new("TextButton", TopBar); CloseBtn.Size = UDim2.new(0, 35, 0, 35); CloseBtn.Position = UDim2.new(1, -35, 0, 0); CloseBtn.Text = "X"; CloseBtn.TextColor3 = Color3.fromRGB(255, 60, 60); CloseBtn.Font = "GothamBold"; CloseBtn.BackgroundTransparency = 1
     CloseBtn.MouseButton1Click:Connect(function() MainUI:Destroy() end)
@@ -220,16 +252,27 @@ local function InitCheat()
 
     local T1, B1 = CreateTab("Combat"); local T2, B2 = CreateTab("Visuals"); local T3, B3 = CreateTab("Movement"); local T4, B4 = CreateTab("Settings")
 
+    -- COMBAT
     AddToggle(T1, "SILENT AIM (NEAREST)", Config, "Silent")
     AddToggle(T1, "SHOW FOV CIRCLE", Config, "ShowFOV")
+    AddToggle(T1, "TP KILL (AUTO ATTACK)", Config, "TPKill")
+
+    -- VISUALS
     AddToggle(T2, "ESP BOXES", Config, "ESP_Box")
     AddToggle(T2, "ESP NAME & HP", Config, "ESP_HealthText")
+
+    -- MOVEMENT
+    local SpeedBtn = AddBtn(T3, "TOGGLE SPEED (45)", function() 
+        Config.WalkSpeedValue = (Config.WalkSpeedValue == 16) and 45 or 16 
+    end)
     AddToggle(T3, "FLY MODE (CFrame)", Config, "Fly")
-    AddToggle(T3, "NOCLIP (ANTI-VOID)", Config, "NoClip")
+    AddToggle(T3, "NOCLIP (ANTI-WALL)", Config, "NoClip")
+    AddToggle(T3, "ANTI-RAGDOLL", Config, "AntiRagdoll")
+
+    -- SETTINGS
     AddHotkey(T4, "MENU BIND", Config, "MenuKey")
     AddHotkey(T4, "TELEPORT BIND", Config, "TP_Key")
 
-    -- BOUTON DISCORD DANS SETTINGS
     local DiscFrame = Instance.new("Frame", T4); DiscFrame.Size = UDim2.new(1, -10, 0, 40); DiscFrame.BackgroundColor3 = Color3.fromRGB(88, 101, 242); Instance.new("UICorner", DiscFrame)
     local DiscBtn = Instance.new("TextButton", DiscFrame); DiscBtn.Size = UDim2.new(1, 0, 1, 0); DiscBtn.BackgroundTransparency = 1; DiscBtn.Text = "COPY DISCORD LINK"; DiscBtn.TextColor3 = Color3.new(1,1,1); DiscBtn.Font = "GothamBold"
     DiscBtn.MouseButton1Click:Connect(function() setclipboard(Config.Discord); DiscBtn.Text = "COPIED!"; task.wait(1); DiscBtn.Text = "COPY DISCORD LINK" end)
@@ -242,7 +285,14 @@ local function InitCheat()
     ReboundAnim(Frame); StartCoreLogic(); T1.Visible = true; B1.TextColor3 = Config.AccentColor
 end
 
--- [[ SYSTEME DE CLE + SAUVEGARDE ]] --
+-- HELPER POUR LES BOUTONS SIMPLES
+function AddBtn(parent, text, callback)
+    local b = Instance.new("TextButton", parent); b.Size = UDim2.new(1, -10, 0, 40); b.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    b.Text = text; b.TextColor3 = Color3.new(1, 1, 1); b.Font = "Gotham"; Instance.new("UICorner", b)
+    b.MouseButton1Click:Connect(callback); return b
+end
+
+-- [[ SYSTEME DE CLE ]] --
 local function InitKeySystem()
     if isfile and isfile(Config.FileName) then
         if readfile(Config.FileName) == Config.CorrectKey then InitCheat() return end
