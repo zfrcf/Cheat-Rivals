@@ -1,5 +1,5 @@
 -- [[ SoloCheat - V1 PRO ]] --
--- [[ EDITION : RIVALS ULTIMATE | ZERO COMPRESSION | HAUTE PRECISION ]] --
+-- [[ EDITION : RIVALS ULTIMATE | CONFIG SYSTEM | ZERO COMPRESSION ]] --
 
 repeat task.wait() until game:IsLoaded()
 
@@ -34,6 +34,7 @@ local CoreGui = game:GetService("CoreGui")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -43,12 +44,15 @@ local Mouse = LocalPlayer:GetMouse()
 -- [[ 3. CONFIGURATION GÉNÉRALE ]]            --
 -- ========================================== --
 local Config = {
-    -- Fichier et Sécurité
-    FileName = "SoloCheat_Key.txt",
+    -- Fichier Key et Thème (Non sauvegardés dans les profils)
+    KeyFileName = "SoloCheat_Key.txt",
     CorrectKey = "SoloCheat-5f9e2b81a4c7d3e0f91a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0",
     Discord = "https://discord.gg/VDNw9dXnJe",
+    AccentColor = Color3.fromRGB(255, 0, 80),
+    BgColor = Color3.fromRGB(15, 15, 15),
+    SecColor = Color3.fromRGB(25, 25, 25),
     
-    -- Combat
+    -- Variables Actives (Sauvegardées dans les profils)
     Silent = false,
     TriggerBot = false,
     TPKill = false,
@@ -56,30 +60,112 @@ local Config = {
     FOV = 200,
     ShowFOV = true,
     TargetPart = "Head",
-    
-    -- Mouvement
     Fly = false,
     FlySpeed = 2,
     NoClip = false,
     AntiRagdoll = true,
     WalkSpeedValue = 16,
-    
-    -- Visuels (ESP)
     ESP_Box = false,
     ESP_HealthText = false,
-    
-    -- Touches Raccourcis
     TP_Key = Enum.KeyCode.E,
-    MenuKey = Enum.KeyCode.K,
-    
-    -- Thème UI
-    AccentColor = Color3.fromRGB(255, 0, 80), -- Rouge/Rose Rivals
-    BgColor = Color3.fromRGB(15, 15, 15),
-    SecColor = Color3.fromRGB(25, 25, 25)
+    MenuKey = Enum.KeyCode.K
 }
 
 -- ========================================== --
--- [[ 4. FONCTIONS UTILITAIRES ]]             --
+-- [[ 4. GESTIONNAIRE DE CONFIGURATION ]]     --
+-- ========================================== --
+local ConfigFileName = "SoloCheat_Config.json"
+local ConfigData = {
+    LastConfig = "Default",
+    Profiles = {}
+}
+
+-- Fonction pour charger le fichier depuis le PC
+local function LoadConfigsFromFile()
+    if isfile and isfile(ConfigFileName) and readfile then
+        local success, result = pcall(function()
+            return HttpService:JSONDecode(readfile(ConfigFileName))
+        end)
+        if success and type(result) == "table" then
+            ConfigData = result
+            if not ConfigData.Profiles then 
+                ConfigData.Profiles = {} 
+            end
+        end
+    end
+end
+
+-- Fonction pour écrire le fichier sur le PC
+local function SaveConfigsToFile()
+    if writefile then
+        local json = HttpService:JSONEncode(ConfigData)
+        writefile(ConfigFileName, json)
+    end
+end
+
+-- Appliquer un profil spécifique au script
+local function ApplyConfigProfile(profileName)
+    local data = ConfigData.Profiles[profileName]
+    if not data then return end
+    
+    for k, v in pairs(data) do
+        if k == "TP_Key" or k == "MenuKey" then
+            Config[k] = Enum.KeyCode[v] or Config[k]
+        else
+            Config[k] = v
+        end
+    end
+    ConfigData.LastConfig = profileName
+    SaveConfigsToFile()
+end
+
+-- Sauvegarder les valeurs actuelles dans un profil
+local function SaveCurrentToProfile(profileName)
+    ConfigData.Profiles[profileName] = {
+        Silent = Config.Silent,
+        TriggerBot = Config.TriggerBot,
+        TPKill = Config.TPKill,
+        ShowFOV = Config.ShowFOV,
+        ESP_Box = Config.ESP_Box,
+        ESP_HealthText = Config.ESP_HealthText,
+        Fly = Config.Fly,
+        NoClip = Config.NoClip,
+        AntiRagdoll = Config.AntiRagdoll,
+        WalkSpeedValue = Config.WalkSpeedValue,
+        TP_Key = Config.TP_Key.Name,
+        MenuKey = Config.MenuKey.Name
+    }
+    ConfigData.LastConfig = profileName
+    SaveConfigsToFile()
+end
+
+-- Table pour stocker les boutons de l'UI et les mettre à jour dynamiquement
+local UIElements = {
+    Toggles = {},
+    Hotkeys = {}
+}
+
+local function RefreshUI()
+    for key, btn in pairs(UIElements.Toggles) do
+        if Config[key] ~= nil then
+            btn.BackgroundColor3 = Config[key] and Config.AccentColor or Color3.fromRGB(50, 50, 50)
+        end
+    end
+    for key, btn in pairs(UIElements.Hotkeys) do
+        if Config[key] ~= nil then
+            btn.Text = Config[key].Name
+        end
+    end
+end
+
+-- Chargement automatique au lancement
+LoadConfigsFromFile()
+if ConfigData.LastConfig and ConfigData.Profiles[ConfigData.LastConfig] then
+    ApplyConfigProfile(ConfigData.LastConfig)
+end
+
+-- ========================================== --
+-- [[ 5. FONCTIONS UTILITAIRES ]]             --
 -- ========================================== --
 local function MakeDraggable(frame, parent)
     parent = parent or frame
@@ -158,7 +244,7 @@ local function GetClosestTargetByDistance()
 end
 
 -- ========================================== --
--- [[ 5. LOGIQUE PRINCIPALE & ESP ]]          --
+-- [[ 6. LOGIQUE PRINCIPALE & ESP ]]          --
 -- ========================================== --
 local function StartCoreLogic()
     local FOVCircle = Drawing.new("Circle")
@@ -167,14 +253,12 @@ local function StartCoreLogic()
     FOVCircle.Transparency = 1
     FOVCircle.Visible = false
 
-    -- Boucle Principale
     RunService.RenderStepped:Connect(function()
         if not CoreGui:FindFirstChild("SoloV1_Main") then 
             FOVCircle.Visible = false 
             return 
         end
         
-        -- Gestion du FOV Circle
         FOVCircle.Visible = Config.ShowFOV
         FOVCircle.Radius = Config.FOV
         FOVCircle.Position = UIS:GetMouseLocation()
@@ -185,12 +269,10 @@ local function StartCoreLogic()
 
         if char and hum and hrp and hum.Health > 0 then
             
-            -- Vitesse (Forcée en boucle pour bypass les resets du jeu)
             hum.WalkSpeed = Config.WalkSpeedValue
 
-            -- Mode Vol (Fly)
             if Config.Fly then
-                hrp.Velocity = Vector3.new(0, 0.1, 0) -- Anti chute
+                hrp.Velocity = Vector3.new(0, 0.1, 0)
                 local dir = Vector3.new()
                 if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + Camera.CFrame.LookVector end
                 if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - Camera.CFrame.LookVector end
@@ -199,16 +281,12 @@ local function StartCoreLogic()
                 end
             end
 
-            -- NoClip (Passe muraille)
             if Config.NoClip then
                 for _, v in pairs(char:GetDescendants()) do 
-                    if v:IsA("BasePart") then 
-                        v.CanCollide = false 
-                    end 
+                    if v:IsA("BasePart") then v.CanCollide = false end 
                 end
             end
 
-            -- Anti-Ragdoll (Rivals)
             if Config.AntiRagdoll then
                 hum.PlatformStand = false
                 hum.Sit = false
@@ -218,7 +296,6 @@ local function StartCoreLogic()
                 end
             end
 
-            -- Trigger Bot (Tir Automatique)
             if Config.TriggerBot then
                 local target = Mouse.Target
                 if target and target.Parent then
@@ -227,17 +304,12 @@ local function StartCoreLogic()
                         local targetPlayer = Players:GetPlayerFromCharacter(target.Parent)
                         if targetPlayer and targetPlayer ~= LocalPlayer then
                             local tool = char:FindFirstChildOfClass("Tool")
-                            if tool then 
-                                tool:Activate() 
-                            elseif mouse1click then
-                                mouse1click() -- Fallback universel pour les exécuteurs
-                            end
+                            if tool then tool:Activate() elseif mouse1click then mouse1click() end
                         end
                     end
                 end
             end
 
-            -- Silent Aim (Aim Assist invisible)
             if Config.Silent and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
                 local t = GetClosestTargetByDistance()
                 if t and (mousemoverel or getgenv().mousemoverel) then
@@ -247,37 +319,26 @@ local function StartCoreLogic()
                 end
             end
 
-            -- TP Kill (Téléportation et exécution)
             if Config.TPKill then
                 local tObj = GetClosestTargetByDistance()
                 if tObj and tObj.Parent and tObj.Parent:FindFirstChild("HumanoidRootPart") then
                     local targetRoot = tObj.Parent.HumanoidRootPart
                     hrp.CFrame = targetRoot.CFrame * CFrame.new(0, Config.KillOffset, 2)
-                    
-                    -- Orientation de la caméra vers la cible
                     Camera.CFrame = CFrame.new(Camera.CFrame.Position, tObj.Position)
-                    
                     local tool = char:FindFirstChildOfClass("Tool")
-                    if tool then 
-                        tool:Activate() 
-                    elseif mouse1click then
-                        mouse1click()
-                    end
+                    if tool then tool:Activate() elseif mouse1click then mouse1click() end
                 end
             end
         end
     end)
 
-    -- Système ESP Complet
     local function CreatePlayerESP(player)
         player.CharacterAdded:Connect(function(character)
-            task.wait(1) -- Attend le chargement du personnage
+            task.wait(1)
             local head = character:WaitForChild("Head", 5)
             local humanoid = character:WaitForChild("Humanoid", 5)
-            
             if not head or not humanoid then return end
 
-            -- ESP Box
             local box = Instance.new("BoxHandleAdornment")
             box.Name = "SoloCheat_Box"
             box.Adornee = character
@@ -288,7 +349,6 @@ local function StartCoreLogic()
             box.Transparency = 0.7
             box.Parent = character
             
-            -- ESP Text (Nom + HP)
             local billboard = Instance.new("BillboardGui")
             billboard.Name = "SoloCheat_Bill"
             billboard.Adornee = head
@@ -306,7 +366,6 @@ local function StartCoreLogic()
             label.TextSize = 13
             label.TextStrokeTransparency = 0
 
-            -- Mise à jour ESP
             local connection
             connection = RunService.Heartbeat:Connect(function()
                 if not CoreGui:FindFirstChild("SoloV1_Main") then 
@@ -319,7 +378,6 @@ local function StartCoreLogic()
                 if character and humanoid and humanoid.Health > 0 then
                     box.Visible = Config.ESP_Box
                     billboard.Enabled = Config.ESP_HealthText
-                    
                     if billboard.Enabled then
                         label.Text = player.Name .. "\nHP: " .. math.floor(humanoid.Health)
                         label.TextColor3 = Color3.fromHSV(humanoid.Health/100 * 0.35, 1, 1)
@@ -332,25 +390,18 @@ local function StartCoreLogic()
         end)
     end
 
-    -- Initialiser l'ESP pour les joueurs déjà présents
     for _, p in pairs(Players:GetPlayers()) do 
-        if p ~= LocalPlayer then 
-            CreatePlayerESP(p) 
-        end 
+        if p ~= LocalPlayer then CreatePlayerESP(p) end 
     end
-    -- Ajouter l'ESP pour les nouveaux joueurs
     Players.PlayerAdded:Connect(CreatePlayerESP)
 end
 
 -- ========================================== --
--- [[ 6. INTERFACE UTILISATEUR (UI) ]]        --
+-- [[ 7. INTERFACE UTILISATEUR (UI) ]]        --
 -- ========================================== --
 local function InitCheat()
-    if CoreGui:FindFirstChild("SoloV1_Main") then 
-        CoreGui.SoloV1_Main:Destroy() 
-    end
+    if CoreGui:FindFirstChild("SoloV1_Main") then CoreGui.SoloV1_Main:Destroy() end
 
-    -- Création du GUI Principal
     local MainUI = Instance.new("ScreenGui")
     MainUI.Name = "SoloV1_Main"
     MainUI.Parent = CoreGui
@@ -358,8 +409,8 @@ local function InitCheat()
     local Frame = Instance.new("Frame")
     Frame.Name = "MainFrame"
     Frame.Parent = MainUI
-    Frame.Size = UDim2.new(0, 560, 0, 420)
-    Frame.Position = UDim2.new(0.5, -280, 0.5, -210)
+    Frame.Size = UDim2.new(0, 560, 0, 450)
+    Frame.Position = UDim2.new(0.5, -280, 0.5, -225)
     Frame.BackgroundColor3 = Config.BgColor
     Frame.ClipsDescendants = true
     
@@ -370,10 +421,8 @@ local function InitCheat()
     Stroke.Parent = Frame
     Stroke.Color = Config.AccentColor
     Stroke.Thickness = 1.5
-    
     MakeDraggable(Frame)
 
-    -- Barre Supérieure
     local TopBar = Instance.new("Frame")
     TopBar.Name = "TopBar"
     TopBar.Parent = Frame
@@ -401,12 +450,8 @@ local function InitCheat()
     CloseBtn.Text = "X"
     CloseBtn.TextColor3 = Color3.fromRGB(255, 60, 60)
     CloseBtn.Font = Enum.Font.GothamBold
-    
-    CloseBtn.MouseButton1Click:Connect(function() 
-        MainUI:Destroy() 
-    end)
+    CloseBtn.MouseButton1Click:Connect(function() MainUI:Destroy() end)
 
-    -- Barre de navigation (Sidebar)
     local Sidebar = Instance.new("Frame")
     Sidebar.Name = "Sidebar"
     Sidebar.Parent = Frame
@@ -423,7 +468,6 @@ local function InitCheat()
     SideLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     SideLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
-    -- Conteneur des pages
     local Container = Instance.new("Frame")
     Container.Name = "Container"
     Container.Parent = Frame
@@ -431,7 +475,6 @@ local function InitCheat()
     Container.Position = UDim2.new(0, 145, 0, 45)
     Container.BackgroundTransparency = 1
 
-    -- Générateur de Tableaux
     local function CreateTab(name, layoutOrder)
         local TabBtn = Instance.new("TextButton")
         TabBtn.Parent = Sidebar
@@ -451,7 +494,7 @@ local function InitCheat()
         Page.BackgroundTransparency = 1
         Page.Visible = false
         Page.ScrollBarThickness = 0
-        Page.CanvasSize = UDim2.new(0, 0, 2, 0)
+        Page.CanvasSize = UDim2.new(0, 0, 3, 0)
         
         local PageLayout = Instance.new("UIListLayout")
         PageLayout.Parent = Page
@@ -472,8 +515,7 @@ local function InitCheat()
         return Page, TabBtn
     end
 
-    -- Générateur d'Options (Toggle)
-    local function AddToggle(parent, text, configTable, configKey, layoutOrder)
+    local function AddToggle(parent, text, configKey, layoutOrder)
         local ToggleFrame = Instance.new("Frame")
         ToggleFrame.Parent = parent
         ToggleFrame.Size = UDim2.new(1, -10, 0, 40)
@@ -498,20 +540,21 @@ local function InitCheat()
         Btn.Size = UDim2.new(0, 35, 0, 18)
         Btn.Position = UDim2.new(1, -45, 0.5, -9)
         Btn.Text = ""
-        Btn.BackgroundColor3 = configTable[configKey] and Config.AccentColor or Color3.fromRGB(50, 50, 50)
+        Btn.BackgroundColor3 = Config[configKey] and Config.AccentColor or Color3.fromRGB(50, 50, 50)
         
         local BtnCorner = Instance.new("UICorner")
         BtnCorner.Parent = Btn
         BtnCorner.CornerRadius = UDim.new(1, 0)
         
         Btn.MouseButton1Click:Connect(function() 
-            configTable[configKey] = not configTable[configKey]
-            Btn.BackgroundColor3 = configTable[configKey] and Config.AccentColor or Color3.fromRGB(50, 50, 50) 
+            Config[configKey] = not Config[configKey]
+            Btn.BackgroundColor3 = Config[configKey] and Config.AccentColor or Color3.fromRGB(50, 50, 50) 
         end)
+        
+        UIElements.Toggles[configKey] = Btn
     end
 
-    -- Générateur de Raccourcis (Hotkey)
-    local function AddHotkey(parent, text, configTable, configKey, layoutOrder)
+    local function AddHotkey(parent, text, configKey, layoutOrder)
         local KeyFrame = Instance.new("Frame")
         KeyFrame.Parent = parent
         KeyFrame.Size = UDim2.new(1, -10, 0, 40)
@@ -536,7 +579,7 @@ local function InitCheat()
         Btn.Size = UDim2.new(0, 80, 0, 25)
         Btn.Position = UDim2.new(1, -90, 0.5, -12.5)
         Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-        Btn.Text = configTable[configKey].Name
+        Btn.Text = Config[configKey].Name
         Btn.TextColor3 = Config.AccentColor
         Btn.Font = Enum.Font.GothamBold
         
@@ -548,31 +591,29 @@ local function InitCheat()
             local connection
             connection = UIS.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.Keyboard then 
-                    configTable[configKey] = input.KeyCode
+                    Config[configKey] = input.KeyCode
                     Btn.Text = input.KeyCode.Name
                     connection:Disconnect() 
                 end
             end)
         end)
+        
+        UIElements.Hotkeys[configKey] = Btn
     end
 
-    -- Création des Pages
     local TabCombat, BtnCombat = CreateTab("Combat", 1)
     local TabVisuals, BtnVisuals = CreateTab("Visuals", 2)
     local TabMovement, BtnMovement = CreateTab("Movement", 3)
     local TabSettings, BtnSettings = CreateTab("Settings", 4)
 
-    -- Remplissage de l'onglet Combat
-    AddToggle(TabCombat, "TRIGGER BOT (AUTO-FIRE)", Config, "TriggerBot", 1)
-    AddToggle(TabCombat, "SILENT AIM (MOUSE2)", Config, "Silent", 2)
-    AddToggle(TabCombat, "TP KILL (AUTO-EXECUTE)", Config, "TPKill", 3)
-    AddToggle(TabCombat, "SHOW FOV CIRCLE", Config, "ShowFOV", 4)
+    AddToggle(TabCombat, "TRIGGER BOT (AUTO-FIRE)", "TriggerBot", 1)
+    AddToggle(TabCombat, "SILENT AIM (MOUSE2)", "Silent", 2)
+    AddToggle(TabCombat, "TP KILL (AUTO-EXECUTE)", "TPKill", 3)
+    AddToggle(TabCombat, "SHOW FOV CIRCLE", "ShowFOV", 4)
 
-    -- Remplissage de l'onglet Visuels
-    AddToggle(TabVisuals, "ESP BOXES", Config, "ESP_Box", 1)
-    AddToggle(TabVisuals, "ESP NAME & HP", Config, "ESP_HealthText", 2)
+    AddToggle(TabVisuals, "ESP BOXES", "ESP_Box", 1)
+    AddToggle(TabVisuals, "ESP NAME & HP", "ESP_HealthText", 2)
 
-    -- Remplissage de l'onglet Mouvement
     local SpeedBtn = Instance.new("TextButton")
     SpeedBtn.Parent = TabMovement
     SpeedBtn.Size = UDim2.new(1, -10, 0, 40)
@@ -589,19 +630,150 @@ local function InitCheat()
         Config.WalkSpeedValue = (Config.WalkSpeedValue == 16) and 45 or 16 
     end)
 
-    AddToggle(TabMovement, "FLY MODE (CFRAME)", Config, "Fly", 2)
-    AddToggle(TabMovement, "NOCLIP (ANTI-WALL)", Config, "NoClip", 3)
-    AddToggle(TabMovement, "ANTI-RAGDOLL", Config, "AntiRagdoll", 4)
+    AddToggle(TabMovement, "FLY MODE (CFRAME)", "Fly", 2)
+    AddToggle(TabMovement, "NOCLIP (ANTI-WALL)", "NoClip", 3)
+    AddToggle(TabMovement, "ANTI-RAGDOLL", "AntiRagdoll", 4)
 
-    -- Remplissage de l'onglet Paramètres
-    AddHotkey(TabSettings, "MENU BIND", Config, "MenuKey", 1)
-    AddHotkey(TabSettings, "TELEPORT BIND", Config, "TP_Key", 2)
+    -- [[ AJOUT DU GESTIONNAIRE DE CONFIG DANS LES SETTINGS ]] --
+    
+    local ConfigTitle = Instance.new("TextLabel")
+    ConfigTitle.Parent = TabSettings
+    ConfigTitle.Size = UDim2.new(1, -10, 0, 20)
+    ConfigTitle.BackgroundTransparency = 1
+    ConfigTitle.Text = "CONFIG MANAGER"
+    ConfigTitle.TextColor3 = Config.AccentColor
+    ConfigTitle.Font = Enum.Font.GothamBold
+    ConfigTitle.LayoutOrder = 1
+
+    local ConfigContainer = Instance.new("Frame")
+    ConfigContainer.Parent = TabSettings
+    ConfigContainer.Size = UDim2.new(1, -10, 0, 90) -- Taille par défaut (fermée)
+    ConfigContainer.BackgroundColor3 = Config.SecColor
+    ConfigContainer.LayoutOrder = 2
+    ConfigContainer.ClipsDescendants = true
+    
+    local ConfigCorner = Instance.new("UICorner")
+    ConfigCorner.Parent = ConfigContainer
+    
+    local ConfigBox = Instance.new("TextBox")
+    ConfigBox.Parent = ConfigContainer
+    ConfigBox.Size = UDim2.new(0.6, -5, 0, 30)
+    ConfigBox.Position = UDim2.new(0, 10, 0, 10)
+    ConfigBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    ConfigBox.TextColor3 = Color3.new(1, 1, 1)
+    ConfigBox.PlaceholderText = "Nom de la config..."
+    ConfigBox.Text = ConfigData.LastConfig ~= "Default" and ConfigData.LastConfig or ""
+    ConfigBox.Font = Enum.Font.Gotham
+    
+    local ConfigBoxCorner = Instance.new("UICorner")
+    ConfigBoxCorner.Parent = ConfigBox
+
+    local SaveConfigBtn = Instance.new("TextButton")
+    SaveConfigBtn.Parent = ConfigContainer
+    SaveConfigBtn.Size = UDim2.new(0.4, -25, 0, 30)
+    SaveConfigBtn.Position = UDim2.new(0.6, 15, 0, 10)
+    SaveConfigBtn.BackgroundColor3 = Config.AccentColor
+    SaveConfigBtn.Text = "SAUVEGARDER"
+    SaveConfigBtn.TextColor3 = Color3.new(1, 1, 1)
+    SaveConfigBtn.Font = Enum.Font.GothamBold
+    
+    local SaveConfigCorner = Instance.new("UICorner")
+    SaveConfigCorner.Parent = SaveConfigBtn
+
+    local DropdownBtn = Instance.new("TextButton")
+    DropdownBtn.Parent = ConfigContainer
+    DropdownBtn.Size = UDim2.new(1, -20, 0, 30)
+    DropdownBtn.Position = UDim2.new(0, 10, 0, 50)
+    DropdownBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    DropdownBtn.Text = "CONFIG : " .. ConfigData.LastConfig .. " ▼"
+    DropdownBtn.TextColor3 = Color3.new(1, 1, 1)
+    DropdownBtn.Font = Enum.Font.GothamBold
+    
+    local DropdownCorner = Instance.new("UICorner")
+    DropdownCorner.Parent = DropdownBtn
+
+    local DropdownList = Instance.new("ScrollingFrame")
+    DropdownList.Parent = ConfigContainer
+    DropdownList.Size = UDim2.new(1, -20, 0, 80)
+    DropdownList.Position = UDim2.new(0, 10, 0, 85)
+    DropdownList.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    DropdownList.Visible = false
+    DropdownList.ScrollBarThickness = 2
+    
+    local DropdownListLayout = Instance.new("UIListLayout")
+    DropdownListLayout.Parent = DropdownList
+    DropdownListLayout.Padding = UDim.new(0, 2)
+
+    local function PopulateDropdown()
+        for _, v in pairs(DropdownList:GetChildren()) do
+            if v:IsA("TextButton") then v:Destroy() end
+        end
+        local ySize = 0
+        for profileName, _ in pairs(ConfigData.Profiles) do
+            local itemBtn = Instance.new("TextButton")
+            itemBtn.Parent = DropdownList
+            itemBtn.Size = UDim2.new(1, 0, 0, 25)
+            itemBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+            itemBtn.Text = profileName
+            itemBtn.TextColor3 = Color3.new(1, 1, 1)
+            itemBtn.Font = Enum.Font.Gotham
+            
+            itemBtn.MouseButton1Click:Connect(function()
+                ApplyConfigProfile(profileName)
+                RefreshUI() -- Met à jour les boutons visuellement
+                ConfigBox.Text = profileName
+                DropdownBtn.Text = "CONFIG : " .. profileName .. " ▼"
+                DropdownList.Visible = false
+                
+                -- Animation de fermeture
+                TweenService:Create(ConfigContainer, TweenInfo.new(0.2), {Size = UDim2.new(1, -10, 0, 90)}):Play()
+            end)
+            ySize = ySize + 27
+        end
+        DropdownList.CanvasSize = UDim2.new(0, 0, 0, ySize)
+    end
+
+    SaveConfigBtn.MouseButton1Click:Connect(function()
+        local name = ConfigBox.Text
+        if name and name ~= "" then
+            SaveCurrentToProfile(name)
+            PopulateDropdown()
+            DropdownBtn.Text = "CONFIG : " .. name .. " ▼"
+            SaveConfigBtn.Text = "OK!"
+            task.wait(1)
+            SaveConfigBtn.Text = "SAUVEGARDER"
+        end
+    end)
+
+    DropdownBtn.MouseButton1Click:Connect(function()
+        DropdownList.Visible = not DropdownList.Visible
+        if DropdownList.Visible then
+            PopulateDropdown()
+            TweenService:Create(ConfigContainer, TweenInfo.new(0.2), {Size = UDim2.new(1, -10, 0, 175)}):Play()
+        else
+            TweenService:Create(ConfigContainer, TweenInfo.new(0.2), {Size = UDim2.new(1, -10, 0, 90)}):Play()
+        end
+    end)
+
+    -- Fin du gestionnaire de config
+    
+    local BindsTitle = Instance.new("TextLabel")
+    BindsTitle.Parent = TabSettings
+    BindsTitle.Size = UDim2.new(1, -10, 0, 20)
+    BindsTitle.BackgroundTransparency = 1
+    BindsTitle.Text = "RACCOURCIS"
+    BindsTitle.TextColor3 = Config.AccentColor
+    BindsTitle.Font = Enum.Font.GothamBold
+    BindsTitle.LayoutOrder = 3
+
+    AddHotkey(TabSettings, "MENU BIND", "MenuKey", 4)
+    AddHotkey(TabSettings, "TELEPORT BIND", "TP_Key", 5)
 
     local DiscFrame = Instance.new("Frame")
     DiscFrame.Parent = TabSettings
     DiscFrame.Size = UDim2.new(1, -10, 0, 40)
     DiscFrame.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
-    DiscFrame.LayoutOrder = 3
+    DiscFrame.LayoutOrder = 6
     
     local DiscCorner = Instance.new("UICorner")
     DiscCorner.Parent = DiscFrame
@@ -621,49 +793,36 @@ local function InitCheat()
         DiscBtn.Text = "COPY DISCORD LINK" 
     end)
 
-    -- Inputs Généraux (Menu et TP Hit)
     UIS.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
-        
-        -- TP au clic
         if input.KeyCode == Config.TP_Key and LocalPlayer.Character then 
             local rootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if rootPart then
-                rootPart.CFrame = Mouse.Hit * CFrame.new(0, 3, 0) 
-            end
+            if rootPart then rootPart.CFrame = Mouse.Hit * CFrame.new(0, 3, 0) end
         end
-        
-        -- Afficher/Cacher le menu
         if input.KeyCode == Config.MenuKey and CoreGui:FindFirstChild("SoloV1_Main") then 
             Frame.Visible = not Frame.Visible 
         end
     end)
 
-    -- Animation de lancement
     ReboundAnim(Frame)
     StartCoreLogic()
     
-    -- Activer le premier onglet par défaut
     TabCombat.Visible = true
     BtnCombat.TextColor3 = Config.AccentColor
 end
 
 -- ========================================== --
--- [[ 7. SYSTEME DE CLE & SAUVEGARDE ]]       --
+-- [[ 8. SYSTEME DE CLE & SAUVEGARDE ]]       --
 -- ========================================== --
 local function InitKeySystem()
-    -- Vérification automatique de la clé sauvegardée
-    if isfile and isfile(Config.FileName) then
-        if readfile(Config.FileName) == Config.CorrectKey then 
+    if isfile and isfile(Config.KeyFileName) then
+        if readfile(Config.KeyFileName) == Config.CorrectKey then 
             InitCheat() 
             return 
         end
     end
 
-    -- UI du Key System
-    if CoreGui:FindFirstChild("SoloV1_Key") then 
-        CoreGui.SoloV1_Key:Destroy() 
-    end
+    if CoreGui:FindFirstChild("SoloV1_Key") then CoreGui.SoloV1_Key:Destroy() end
     
     local KeyUI = Instance.new("ScreenGui")
     KeyUI.Name = "SoloV1_Key"
@@ -683,7 +842,6 @@ local function InitKeySystem()
     KStroke.Parent = KFrame
     KStroke.Color = Config.AccentColor
     KStroke.Thickness = 1.5
-    
     MakeDraggable(KFrame)
 
     local KTitle = Instance.new("TextLabel")
@@ -732,12 +890,9 @@ local function InitKeySystem()
     local GetKeyCorner = Instance.new("UICorner")
     GetKeyCorner.Parent = GetKeyBtn
 
-    -- Logique des boutons
     ValidBtn.MouseButton1Click:Connect(function()
         if KBox.Text == Config.CorrectKey then
-            if writefile then 
-                writefile(Config.FileName, KBox.Text) 
-            end
+            if writefile then writefile(Config.KeyFileName, KBox.Text) end
             KeyUI:Destroy()
             InitCheat()
         else
@@ -758,6 +913,6 @@ local function InitKeySystem()
 end
 
 -- ========================================== --
--- [[ 8. DEMARRAGE DU SCRIPT ]]               --
+-- [[ 9. DEMARRAGE DU SCRIPT ]]               --
 -- ========================================== --
 InitKeySystem()
