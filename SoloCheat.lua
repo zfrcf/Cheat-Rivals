@@ -1,16 +1,16 @@
 -- [[ SoloCheat - V1 PRO ]] --
--- [[ EDITION : RIVALS ULTIMATE | CONFIG SYSTEM | ZERO COMPRESSION ]] --
+-- [[ EDITION : RIVALS ULTIMATE | ZERO COMPRESSION | ECON SKINCHANGER ]] --
 
 repeat task.wait() until game:IsLoaded()
 
 -- ========================================== --
 -- [[ 1. SÉCURITÉ : VÉRIFICATION RIVALS ]]    --
 -- ========================================== --
-local RIVALS_GAME_ID = 6043017242
+local TARGET_ID = 117398147513099
 local RIVALS_PLACE_IDS = {17625359962, 18641753753, 18641743141, 18641747754}
 local isRivals = false
 
-if game.GameId == RIVALS_GAME_ID then
+if game.GameId == TARGET_ID or game.PlaceId == TARGET_ID then
     isRivals = true
 else
     for _, id in pairs(RIVALS_PLACE_IDS) do
@@ -44,7 +44,7 @@ local Mouse = LocalPlayer:GetMouse()
 -- [[ 3. CONFIGURATION GÉNÉRALE ]]            --
 -- ========================================== --
 local Config = {
-    -- Fichier Key et Thème (Non sauvegardés dans les profils)
+    -- Fichier Key et Thème
     KeyFileName = "SoloCheat_Key.txt",
     CorrectKey = "SoloCheat-5f9e2b81a4c7d3e0f91a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0",
     Discord = "https://discord.gg/VDNw9dXnJe",
@@ -52,7 +52,7 @@ local Config = {
     BgColor = Color3.fromRGB(15, 15, 15),
     SecColor = Color3.fromRGB(25, 25, 25),
     
-    -- Variables Actives (Sauvegardées dans les profils)
+    -- Variables Actives
     Silent = false,
     TriggerBot = false,
     TPKill = false,
@@ -80,7 +80,6 @@ local ConfigData = {
     Profiles = {}
 }
 
--- Fonction pour charger le fichier depuis le PC
 local function LoadConfigsFromFile()
     if isfile and isfile(ConfigFileName) and readfile then
         local success, result = pcall(function()
@@ -95,7 +94,6 @@ local function LoadConfigsFromFile()
     end
 end
 
--- Fonction pour écrire le fichier sur le PC
 local function SaveConfigsToFile()
     if writefile then
         local json = HttpService:JSONEncode(ConfigData)
@@ -103,7 +101,6 @@ local function SaveConfigsToFile()
     end
 end
 
--- Appliquer un profil spécifique au script
 local function ApplyConfigProfile(profileName)
     local data = ConfigData.Profiles[profileName]
     if not data then return end
@@ -119,7 +116,6 @@ local function ApplyConfigProfile(profileName)
     SaveConfigsToFile()
 end
 
--- Sauvegarder les valeurs actuelles dans un profil
 local function SaveCurrentToProfile(profileName)
     ConfigData.Profiles[profileName] = {
         Silent = Config.Silent,
@@ -139,7 +135,6 @@ local function SaveCurrentToProfile(profileName)
     SaveConfigsToFile()
 end
 
--- Table pour stocker les boutons de l'UI et les mettre à jour dynamiquement
 local UIElements = {
     Toggles = {},
     Hotkeys = {}
@@ -158,7 +153,6 @@ local function RefreshUI()
     end
 end
 
--- Chargement automatique au lancement
 LoadConfigsFromFile()
 if ConfigData.LastConfig and ConfigData.Profiles[ConfigData.LastConfig] then
     ApplyConfigProfile(ConfigData.LastConfig)
@@ -304,7 +298,11 @@ local function StartCoreLogic()
                         local targetPlayer = Players:GetPlayerFromCharacter(target.Parent)
                         if targetPlayer and targetPlayer ~= LocalPlayer then
                             local tool = char:FindFirstChildOfClass("Tool")
-                            if tool then tool:Activate() elseif mouse1click then mouse1click() end
+                            if tool then 
+                                tool:Activate() 
+                            elseif mouse1click then 
+                                mouse1click() 
+                            end
                         end
                     end
                 end
@@ -325,8 +323,13 @@ local function StartCoreLogic()
                     local targetRoot = tObj.Parent.HumanoidRootPart
                     hrp.CFrame = targetRoot.CFrame * CFrame.new(0, Config.KillOffset, 2)
                     Camera.CFrame = CFrame.new(Camera.CFrame.Position, tObj.Position)
+                    
                     local tool = char:FindFirstChildOfClass("Tool")
-                    if tool then tool:Activate() elseif mouse1click then mouse1click() end
+                    if tool then 
+                        tool:Activate() 
+                    elseif mouse1click then 
+                        mouse1click() 
+                    end
                 end
             end
         end
@@ -493,7 +496,7 @@ local function InitCheat()
         Page.Size = UDim2.new(1, 0, 1, 0)
         Page.BackgroundTransparency = 1
         Page.Visible = false
-        Page.ScrollBarThickness = 0
+        Page.ScrollBarThickness = 2
         Page.CanvasSize = UDim2.new(0, 0, 3, 0)
         
         local PageLayout = Instance.new("UIListLayout")
@@ -601,19 +604,24 @@ local function InitCheat()
         UIElements.Hotkeys[configKey] = Btn
     end
 
+    -- Création des Pages
     local TabCombat, BtnCombat = CreateTab("Combat", 1)
     local TabVisuals, BtnVisuals = CreateTab("Visuals", 2)
     local TabMovement, BtnMovement = CreateTab("Movement", 3)
-    local TabSettings, BtnSettings = CreateTab("Settings", 4)
+    local TabSkin, BtnSkin = CreateTab("SkinChanger", 4)
+    local TabSettings, BtnSettings = CreateTab("Settings", 5)
 
+    -- ONGLET COMBAT
     AddToggle(TabCombat, "TRIGGER BOT (AUTO-FIRE)", "TriggerBot", 1)
     AddToggle(TabCombat, "SILENT AIM (MOUSE2)", "Silent", 2)
     AddToggle(TabCombat, "TP KILL (AUTO-EXECUTE)", "TPKill", 3)
     AddToggle(TabCombat, "SHOW FOV CIRCLE", "ShowFOV", 4)
 
+    -- ONGLET VISUALS
     AddToggle(TabVisuals, "ESP BOXES", "ESP_Box", 1)
     AddToggle(TabVisuals, "ESP NAME & HP", "ESP_HealthText", 2)
 
+    -- ONGLET MOVEMENT
     local SpeedBtn = Instance.new("TextButton")
     SpeedBtn.Parent = TabMovement
     SpeedBtn.Size = UDim2.new(1, -10, 0, 40)
@@ -634,8 +642,43 @@ local function InitCheat()
     AddToggle(TabMovement, "NOCLIP (ANTI-WALL)", "NoClip", 3)
     AddToggle(TabMovement, "ANTI-RAGDOLL", "AntiRagdoll", 4)
 
-    -- [[ AJOUT DU GESTIONNAIRE DE CONFIG DANS LES SETTINGS ]] --
+    -- ONGLET SKINCHANGER (EconRCO)
+    local SkinLabel = Instance.new("TextLabel")
+    SkinLabel.Parent = TabSkin
+    SkinLabel.Size = UDim2.new(1, -10, 0, 50)
+    SkinLabel.BackgroundTransparency = 1
+    SkinLabel.Text = "RIVALS SKINCHANGER SYSTEM (ECON)"
+    SkinLabel.TextColor3 = Color3.new(1, 1, 1)
+    SkinLabel.Font = Enum.Font.GothamBold
+    SkinLabel.TextWrapped = true
+
+    local RunSkinBtn = Instance.new("TextButton")
+    RunSkinBtn.Parent = TabSkin
+    RunSkinBtn.Size = UDim2.new(1, -10, 0, 45)
+    RunSkinBtn.BackgroundColor3 = Config.AccentColor
+    RunSkinBtn.Text = "ACTIVER LE SKINCHANGER"
+    RunSkinBtn.TextColor3 = Color3.new(1, 1, 1)
+    RunSkinBtn.Font = Enum.Font.GothamBold
     
+    local RunSkinCorner = Instance.new("UICorner")
+    RunSkinCorner.Parent = RunSkinBtn
+
+    RunSkinBtn.MouseButton1Click:Connect(function()
+        RunSkinBtn.Text = "CHARGEMENT..."
+        local success, err = pcall(function()
+            loadstring(game:HttpGet('https://raw.githubusercontent.com/EconRCO/Econ/refs/heads/main/Init'))()
+        end)
+        
+        if success then 
+            RunSkinBtn.Text = "SKINS ACTIFS ✅" 
+            RunSkinBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+        else 
+            RunSkinBtn.Text = "ERREUR ❌" 
+            warn(err) 
+        end
+    end)
+
+    -- ONGLET SETTINGS
     local ConfigTitle = Instance.new("TextLabel")
     ConfigTitle.Parent = TabSettings
     ConfigTitle.Size = UDim2.new(1, -10, 0, 20)
@@ -647,7 +690,7 @@ local function InitCheat()
 
     local ConfigContainer = Instance.new("Frame")
     ConfigContainer.Parent = TabSettings
-    ConfigContainer.Size = UDim2.new(1, -10, 0, 90) -- Taille par défaut (fermée)
+    ConfigContainer.Size = UDim2.new(1, -10, 0, 90)
     ConfigContainer.BackgroundColor3 = Config.SecColor
     ConfigContainer.LayoutOrder = 2
     ConfigContainer.ClipsDescendants = true
@@ -720,12 +763,11 @@ local function InitCheat()
             
             itemBtn.MouseButton1Click:Connect(function()
                 ApplyConfigProfile(profileName)
-                RefreshUI() -- Met à jour les boutons visuellement
+                RefreshUI()
                 ConfigBox.Text = profileName
                 DropdownBtn.Text = "CONFIG : " .. profileName .. " ▼"
                 DropdownList.Visible = false
                 
-                -- Animation de fermeture
                 TweenService:Create(ConfigContainer, TweenInfo.new(0.2), {Size = UDim2.new(1, -10, 0, 90)}):Play()
             end)
             ySize = ySize + 27
@@ -755,8 +797,6 @@ local function InitCheat()
         end
     end)
 
-    -- Fin du gestionnaire de config
-    
     local BindsTitle = Instance.new("TextLabel")
     BindsTitle.Parent = TabSettings
     BindsTitle.Size = UDim2.new(1, -10, 0, 20)
