@@ -6,6 +6,26 @@ repeat task.wait() until game:IsLoaded()
 -- ========================================== --
 -- [[ 1. SÉCURITÉ : VÉRIFICATION RIVALS ]]    --
 -- ========================================== --
+local TARGET_ID = 117398147513099
+local RIVALS_PLACE_IDS = {17625359962, 18641753753, 18641743141, 18641747754}
+local isRivals = false
+
+if game.GameId == TARGET_ID or game.PlaceId == TARGET_ID then
+    isRivals = true
+else
+    for _, id in pairs(RIVALS_PLACE_IDS) do
+        if game.PlaceId == id then
+            isRivals = true
+            break
+        end
+    end
+end
+
+if not isRivals then
+    warn("[SoloCheat] Jeu non supporté. Ce script est exclusivement réservé à Rivals.")
+    return 
+end
+
 -- ========================================== --
 -- [[ 2. SERVICES & VARIABLES GLOBALES ]]     --
 -- ========================================== --
