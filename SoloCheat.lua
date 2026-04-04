@@ -6,23 +6,29 @@ repeat task.wait() until game:IsLoaded()
 -- ========================================== --
 -- [[ 1. SÉCURITÉ : VÉRIFICATION RIVALS ]]    --
 -- ========================================== --
-local TARGET_ID = 117398147513099
-local RIVALS_PLACE_IDS = {17625359962, 18641753753, 18641743141, 18641747754}
+local RIVALS_VALID_IDS = {
+    117398147513099, -- L'ID principal que tu as fourni
+    17625359962,     -- Serveur 1v1
+    18641753753,     -- Serveurs de Match
+    18641743141,     -- Serveurs de Match
+    18641747754,     -- Serveurs de Match
+    6043017242       -- Ancien GameId de sécurité
+}
+
 local isRivals = false
 
-if game.GameId == TARGET_ID or game.PlaceId == TARGET_ID then
-    isRivals = true
-else
-    for _, id in pairs(RIVALS_PLACE_IDS) do
-        if game.PlaceId == id then
-            isRivals = true
-            break
-        end
+-- Boucle de vérification absolue sur le PlaceId ET le GameId
+for _, id in pairs(RIVALS_VALID_IDS) do
+    if game.PlaceId == id or game.GameId == id then
+        isRivals = true
+        break
     end
 end
 
 if not isRivals then
-    warn("[SoloCheat] Jeu non supporté. Ce script est exclusivement réservé à Rivals.")
+    warn("[SoloCheat] Jeu non supporté ! Ce script est exclusivement réservé à Rivals.")
+    warn("-> Ton PlaceId actuel : " .. tostring(game.PlaceId))
+    warn("-> Ton GameId actuel : " .. tostring(game.GameId))
     return 
 end
 
@@ -651,6 +657,7 @@ local function InitCheat()
     SkinLabel.TextColor3 = Color3.new(1, 1, 1)
     SkinLabel.Font = Enum.Font.GothamBold
     SkinLabel.TextWrapped = true
+    SkinLabel.LayoutOrder = 1
 
     local RunSkinBtn = Instance.new("TextButton")
     RunSkinBtn.Parent = TabSkin
@@ -659,6 +666,7 @@ local function InitCheat()
     RunSkinBtn.Text = "ACTIVER LE SKINCHANGER"
     RunSkinBtn.TextColor3 = Color3.new(1, 1, 1)
     RunSkinBtn.Font = Enum.Font.GothamBold
+    RunSkinBtn.LayoutOrder = 2
     
     local RunSkinCorner = Instance.new("UICorner")
     RunSkinCorner.Parent = RunSkinBtn
