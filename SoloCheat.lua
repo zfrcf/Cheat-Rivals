@@ -1,27 +1,34 @@
 -- [[ SoloCheat - V1 PRO ]] --
--- [[ EDITION : RIVALS ULTIMATE | ZERO COMPRESSION | ECON SKINCHANGER ]] --
+-- [[ EDITION : RIVALS ULTIMATE | ZERO COMPRESSION ABSOLUE | ECON SKINCHANGER ]] --
 
-repeat task.wait() until game:IsLoaded()
+repeat
+    task.wait()
+until game:IsLoaded()
 
 -- ========================================== --
 -- [[ 1. SÉCURITÉ : VÉRIFICATION RIVALS ]]    --
 -- ========================================== --
-local RIVALS_VALID_IDS = {
-    117398147513099, -- L'ID principal que tu as fourni
-    17625359962,     -- Serveur 1v1
-    18641753753,     -- Serveurs de Match
-    18641743141,     -- Serveurs de Match
-    18641747754,     -- Serveurs de Match
-    6043017242       -- Ancien GameId de sécurité
+local TARGET_ID = 117398147513099
+local RIVALS_PLACE_IDS = {
+    17625359962,
+    18641753753,
+    18641743141,
+    18641747754,
+    6043017242
 }
 
 local isRivals = false
 
--- Boucle de vérification absolue sur le PlaceId ET le GameId
-for _, id in pairs(RIVALS_VALID_IDS) do
-    if game.PlaceId == id or game.GameId == id then
-        isRivals = true
-        break
+if game.GameId == TARGET_ID then
+    isRivals = true
+elseif game.PlaceId == TARGET_ID then
+    isRivals = true
+else
+    for _, id in pairs(RIVALS_PLACE_IDS) do
+        if game.PlaceId == id then
+            isRivals = true
+            break
+        end
     end
 end
 
@@ -50,7 +57,6 @@ local Mouse = LocalPlayer:GetMouse()
 -- [[ 3. CONFIGURATION GÉNÉRALE ]]            --
 -- ========================================== --
 local Config = {
-    -- Fichier Key et Thème
     KeyFileName = "SoloCheat_Key.txt",
     CorrectKey = "SoloCheat-5f9e2b81a4c7d3e0f91a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0",
     Discord = "https://discord.gg/VDNw9dXnJe",
@@ -58,7 +64,6 @@ local Config = {
     BgColor = Color3.fromRGB(15, 15, 15),
     SecColor = Color3.fromRGB(25, 25, 25),
     
-    -- Variables Actives
     Silent = false,
     TriggerBot = false,
     TPKill = false,
@@ -87,14 +92,21 @@ local ConfigData = {
 }
 
 local function LoadConfigsFromFile()
-    if isfile and isfile(ConfigFileName) and readfile then
-        local success, result = pcall(function()
-            return HttpService:JSONDecode(readfile(ConfigFileName))
-        end)
-        if success and type(result) == "table" then
-            ConfigData = result
-            if not ConfigData.Profiles then 
-                ConfigData.Profiles = {} 
+    if isfile then
+        if isfile(ConfigFileName) then
+            if readfile then
+                local success, result = pcall(function()
+                    return HttpService:JSONDecode(readfile(ConfigFileName))
+                end)
+                
+                if success then
+                    if type(result) == "table" then
+                        ConfigData = result
+                        if not ConfigData.Profiles then 
+                            ConfigData.Profiles = {} 
+                        end
+                    end
+                end
             end
         end
     end
@@ -109,15 +121,20 @@ end
 
 local function ApplyConfigProfile(profileName)
     local data = ConfigData.Profiles[profileName]
-    if not data then return end
+    if not data then 
+        return 
+    end
     
     for k, v in pairs(data) do
-        if k == "TP_Key" or k == "MenuKey" then
+        if k == "TP_Key" then
+            Config[k] = Enum.KeyCode[v] or Config[k]
+        elseif k == "MenuKey" then
             Config[k] = Enum.KeyCode[v] or Config[k]
         else
             Config[k] = v
         end
     end
+    
     ConfigData.LastConfig = profileName
     SaveConfigsToFile()
 end
@@ -137,6 +154,7 @@ local function SaveCurrentToProfile(profileName)
         TP_Key = Config.TP_Key.Name,
         MenuKey = Config.MenuKey.Name
     }
+    
     ConfigData.LastConfig = profileName
     SaveConfigsToFile()
 end
@@ -149,9 +167,14 @@ local UIElements = {
 local function RefreshUI()
     for key, btn in pairs(UIElements.Toggles) do
         if Config[key] ~= nil then
-            btn.BackgroundColor3 = Config[key] and Config.AccentColor or Color3.fromRGB(50, 50, 50)
+            if Config[key] == true then
+                btn.BackgroundColor3 = Config.AccentColor
+            else
+                btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            end
         end
     end
+    
     for key, btn in pairs(UIElements.Hotkeys) do
         if Config[key] ~= nil then
             btn.Text = Config[key].Name
@@ -160,15 +183,21 @@ local function RefreshUI()
 end
 
 LoadConfigsFromFile()
-if ConfigData.LastConfig and ConfigData.Profiles[ConfigData.LastConfig] then
-    ApplyConfigProfile(ConfigData.LastConfig)
+
+if ConfigData.LastConfig then
+    if ConfigData.Profiles[ConfigData.LastConfig] then
+        ApplyConfigProfile(ConfigData.LastConfig)
+    end
 end
 
 -- ========================================== --
 -- [[ 5. FONCTIONS UTILITAIRES ]]             --
 -- ========================================== --
 local function MakeDraggable(frame, parent)
-    parent = parent or frame
+    if not parent then
+        parent = frame
+    end
+    
     local dragging = false
     local dragStart = nil
     local startPos = nil
@@ -188,14 +217,16 @@ local function MakeDraggable(frame, parent)
     end)
 
     UIS.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position - dragStart
-            parent.Position = UDim2.new(
-                startPos.X.Scale, 
-                startPos.X.Offset + delta.X, 
-                startPos.Y.Scale, 
-                startPos.Y.Offset + delta.Y
-            )
+        if dragging then
+            if input.UserInputType == Enum.UserInputType.MouseMovement then
+                local delta = input.Position - dragStart
+                local newXScale = startPos.X.Scale
+                local newXOffset = startPos.X.Offset + delta.X
+                local newYScale = startPos.Y.Scale
+                local newYOffset = startPos.Y.Offset + delta.Y
+                
+                parent.Position = UDim2.new(newXScale, newXOffset, newYScale, newYOffset)
+            end
         end
     end)
 end
@@ -213,33 +244,47 @@ local function GetClosestTargetByDistance()
     local target = nil
     local nearestDist = math.huge
     local myCharacter = LocalPlayer.Character
-    local myRoot = myCharacter and myCharacter:FindFirstChild("HumanoidRootPart")
     
-    if not myRoot then return nil end
+    if not myCharacter then
+        return nil
+    end
+    
+    local myRoot = myCharacter:FindFirstChild("HumanoidRootPart")
+    
+    if not myRoot then 
+        return nil 
+    end
 
     for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character then
-            local enemyPart = p.Character:FindFirstChild(Config.TargetPart)
-            local hum = p.Character:FindFirstChild("Humanoid")
-            
-            if enemyPart and hum and hum.Health > 0 then
-                local pos, onScreen = Camera:WorldToViewportPoint(enemyPart.Position)
+        if p ~= LocalPlayer then
+            if p.Character then
+                local enemyPart = p.Character:FindFirstChild(Config.TargetPart)
+                local hum = p.Character:FindFirstChild("Humanoid")
                 
-                if onScreen then
-                    local mousePos = UIS:GetMouseLocation()
-                    local fovDist = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
-                    
-                    if fovDist <= Config.FOV then
-                        local realDist = (enemyPart.Position - myRoot.Position).Magnitude
-                        if realDist < nearestDist then
-                            nearestDist = realDist
-                            target = enemyPart
+                if enemyPart then
+                    if hum then
+                        if hum.Health > 0 then
+                            local pos, onScreen = Camera:WorldToViewportPoint(enemyPart.Position)
+                            
+                            if onScreen then
+                                local mousePos = UIS:GetMouseLocation()
+                                local fovDist = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
+                                
+                                if fovDist <= Config.FOV then
+                                    local realDist = (enemyPart.Position - myRoot.Position).Magnitude
+                                    if realDist < nearestDist then
+                                        nearestDist = realDist
+                                        target = enemyPart
+                                    end
+                                end
+                            end
                         end
                     end
                 end
             end
         end
     end
+    
     return target
 end
 
@@ -254,7 +299,9 @@ local function StartCoreLogic()
     FOVCircle.Visible = false
 
     RunService.RenderStepped:Connect(function()
-        if not CoreGui:FindFirstChild("SoloV1_Main") then 
+        local mainGui = CoreGui:FindFirstChild("SoloV1_Main")
+        
+        if not mainGui then 
             FOVCircle.Visible = false 
             return 
         end
@@ -264,77 +311,118 @@ local function StartCoreLogic()
         FOVCircle.Position = UIS:GetMouseLocation()
 
         local char = LocalPlayer.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        
+        if char then
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            local hrp = char:FindFirstChild("HumanoidRootPart")
 
-        if char and hum and hrp and hum.Health > 0 then
-            
-            hum.WalkSpeed = Config.WalkSpeedValue
+            if hum then
+                if hrp then
+                    if hum.Health > 0 then
+                        
+                        hum.WalkSpeed = Config.WalkSpeedValue
 
-            if Config.Fly then
-                hrp.Velocity = Vector3.new(0, 0.1, 0)
-                local dir = Vector3.new()
-                if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + Camera.CFrame.LookVector end
-                if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - Camera.CFrame.LookVector end
-                if dir.Magnitude > 0 then 
-                    hrp.CFrame = hrp.CFrame + (dir * Config.FlySpeed) 
-                end
-            end
-
-            if Config.NoClip then
-                for _, v in pairs(char:GetDescendants()) do 
-                    if v:IsA("BasePart") then v.CanCollide = false end 
-                end
-            end
-
-            if Config.AntiRagdoll then
-                hum.PlatformStand = false
-                hum.Sit = false
-                hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-                if hum:GetState() == Enum.HumanoidStateType.Ragdoll then 
-                    hum:ChangeState(Enum.HumanoidStateType.GettingUp) 
-                end
-            end
-
-            if Config.TriggerBot then
-                local target = Mouse.Target
-                if target and target.Parent then
-                    local targetHum = target.Parent:FindFirstChild("Humanoid")
-                    if targetHum and targetHum.Health > 0 then
-                        local targetPlayer = Players:GetPlayerFromCharacter(target.Parent)
-                        if targetPlayer and targetPlayer ~= LocalPlayer then
-                            local tool = char:FindFirstChildOfClass("Tool")
-                            if tool then 
-                                tool:Activate() 
-                            elseif mouse1click then 
-                                mouse1click() 
+                        if Config.Fly then
+                            hrp.Velocity = Vector3.new(0, 0.1, 0)
+                            local dir = Vector3.new()
+                            
+                            if UIS:IsKeyDown(Enum.KeyCode.W) then 
+                                dir = dir + Camera.CFrame.LookVector 
+                            end
+                            
+                            if UIS:IsKeyDown(Enum.KeyCode.S) then 
+                                dir = dir - Camera.CFrame.LookVector 
+                            end
+                            
+                            if dir.Magnitude > 0 then 
+                                hrp.CFrame = hrp.CFrame + (dir * Config.FlySpeed) 
                             end
                         end
-                    end
-                end
-            end
 
-            if Config.Silent and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-                local t = GetClosestTargetByDistance()
-                if t and (mousemoverel or getgenv().mousemoverel) then
-                    local m = mousemoverel or getgenv().mousemoverel
-                    local pos = Camera:WorldToViewportPoint(t.Position)
-                    m(pos.X - UIS:GetMouseLocation().X, pos.Y - UIS:GetMouseLocation().Y)
-                end
-            end
+                        if Config.NoClip then
+                            local descendants = char:GetDescendants()
+                            for _, v in pairs(descendants) do 
+                                if v:IsA("BasePart") then 
+                                    v.CanCollide = false 
+                                end 
+                            end
+                        end
 
-            if Config.TPKill then
-                local tObj = GetClosestTargetByDistance()
-                if tObj and tObj.Parent and tObj.Parent:FindFirstChild("HumanoidRootPart") then
-                    local targetRoot = tObj.Parent.HumanoidRootPart
-                    hrp.CFrame = targetRoot.CFrame * CFrame.new(0, Config.KillOffset, 2)
-                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, tObj.Position)
-                    
-                    local tool = char:FindFirstChildOfClass("Tool")
-                    if tool then 
-                        tool:Activate() 
-                    elseif mouse1click then 
-                        mouse1click() 
+                        if Config.AntiRagdoll then
+                            hum.PlatformStand = false
+                            hum.Sit = false
+                            hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+                            
+                            if hum:GetState() == Enum.HumanoidStateType.Ragdoll then 
+                                hum:ChangeState(Enum.HumanoidStateType.GettingUp) 
+                            end
+                        end
+
+                        if Config.TriggerBot then
+                            local target = Mouse.Target
+                            if target then
+                                if target.Parent then
+                                    local targetHum = target.Parent:FindFirstChild("Humanoid")
+                                    if targetHum then
+                                        if targetHum.Health > 0 then
+                                            local targetPlayer = Players:GetPlayerFromCharacter(target.Parent)
+                                            if targetPlayer then
+                                                if targetPlayer ~= LocalPlayer then
+                                                    local tool = char:FindFirstChildOfClass("Tool")
+                                                    if tool then 
+                                                        tool:Activate() 
+                                                    elseif mouse1click then 
+                                                        mouse1click() 
+                                                    end
+                                                end
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end
+
+                        if Config.Silent then
+                            if UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+                                local t = GetClosestTargetByDistance()
+                                if t then
+                                    if mousemoverel then
+                                        local pos = Camera:WorldToViewportPoint(t.Position)
+                                        local mouseLoc = UIS:GetMouseLocation()
+                                        mousemoverel(pos.X - mouseLoc.X, pos.Y - mouseLoc.Y)
+                                    elseif getgenv().mousemoverel then
+                                        local m = getgenv().mousemoverel
+                                        local pos = Camera:WorldToViewportPoint(t.Position)
+                                        local mouseLoc = UIS:GetMouseLocation()
+                                        m(pos.X - mouseLoc.X, pos.Y - mouseLoc.Y)
+                                    end
+                                end
+                            end
+                        end
+
+                        if Config.TPKill then
+                            local tObj = GetClosestTargetByDistance()
+                            if tObj then
+                                if tObj.Parent then
+                                    local targetRoot = tObj.Parent:FindFirstChild("HumanoidRootPart")
+                                    if targetRoot then
+                                        local offsetCFrame = CFrame.new(0, Config.KillOffset, 2)
+                                        hrp.CFrame = targetRoot.CFrame * offsetCFrame
+                                        
+                                        local lookAtCFrame = CFrame.new(Camera.CFrame.Position, tObj.Position)
+                                        Camera.CFrame = lookAtCFrame
+                                        
+                                        local tool = char:FindFirstChildOfClass("Tool")
+                                        if tool then 
+                                            tool:Activate() 
+                                        elseif mouse1click then 
+                                            mouse1click() 
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                        
                     end
                 end
             end
@@ -344,52 +432,76 @@ local function StartCoreLogic()
     local function CreatePlayerESP(player)
         player.CharacterAdded:Connect(function(character)
             task.wait(1)
+            
             local head = character:WaitForChild("Head", 5)
             local humanoid = character:WaitForChild("Humanoid", 5)
-            if not head or not humanoid then return end
+            
+            if not head then
+                return
+            end
+            
+            if not humanoid then 
+                return 
+            end
 
             local box = Instance.new("BoxHandleAdornment")
             box.Name = "SoloCheat_Box"
-            box.Adornee = character
             box.AlwaysOnTop = true
             box.ZIndex = 10
             box.Size = Vector3.new(4, 6, 1)
             box.Color3 = Config.AccentColor
             box.Transparency = 0.7
+            box.Adornee = character
             box.Parent = character
             
             local billboard = Instance.new("BillboardGui")
             billboard.Name = "SoloCheat_Bill"
-            billboard.Adornee = head
             billboard.Size = UDim2.new(0, 150, 0, 60)
             billboard.AlwaysOnTop = true
             billboard.ExtentsOffset = Vector3.new(0, 3.5, 0)
+            billboard.Adornee = head
             billboard.Parent = head
             
             local label = Instance.new("TextLabel")
             label.Name = "NameLabel"
-            label.Parent = billboard
             label.Size = UDim2.new(1, 0, 1, 0)
             label.BackgroundTransparency = 1
             label.Font = Enum.Font.GothamBold
             label.TextSize = 13
             label.TextStrokeTransparency = 0
+            label.Parent = billboard
 
             local connection
             connection = RunService.Heartbeat:Connect(function()
-                if not CoreGui:FindFirstChild("SoloV1_Main") then 
+                local guiCheck = CoreGui:FindFirstChild("SoloV1_Main")
+                
+                if not guiCheck then 
                     box.Visible = false
                     billboard.Enabled = false
                     connection:Disconnect()
                     return 
                 end
 
-                if character and humanoid and humanoid.Health > 0 then
-                    box.Visible = Config.ESP_Box
-                    billboard.Enabled = Config.ESP_HealthText
-                    if billboard.Enabled then
-                        label.Text = player.Name .. "\nHP: " .. math.floor(humanoid.Health)
-                        label.TextColor3 = Color3.fromHSV(humanoid.Health/100 * 0.35, 1, 1)
+                if character then
+                    if humanoid then
+                        if humanoid.Health > 0 then
+                            box.Visible = Config.ESP_Box
+                            billboard.Enabled = Config.ESP_HealthText
+                            
+                            if billboard.Enabled then
+                                local healthFloor = math.floor(humanoid.Health)
+                                label.Text = player.Name .. "\nHP: " .. tostring(healthFloor)
+                                
+                                local hue = (humanoid.Health / 100) * 0.35
+                                label.TextColor3 = Color3.fromHSV(hue, 1, 1)
+                            end
+                        else
+                            box.Visible = false
+                            billboard.Enabled = false
+                        end
+                    else
+                        box.Visible = false
+                        billboard.Enabled = false
                     end
                 else
                     box.Visible = false
@@ -399,9 +511,13 @@ local function StartCoreLogic()
         end)
     end
 
-    for _, p in pairs(Players:GetPlayers()) do 
-        if p ~= LocalPlayer then CreatePlayerESP(p) end 
+    local allPlayers = Players:GetPlayers()
+    for _, p in pairs(allPlayers) do 
+        if p ~= LocalPlayer then 
+            CreatePlayerESP(p) 
+        end 
     end
+    
     Players.PlayerAdded:Connect(CreatePlayerESP)
 end
 
@@ -409,7 +525,10 @@ end
 -- [[ 7. INTERFACE UTILISATEUR (UI) ]]        --
 -- ========================================== --
 local function InitCheat()
-    if CoreGui:FindFirstChild("SoloV1_Main") then CoreGui.SoloV1_Main:Destroy() end
+    local existingGui = CoreGui:FindFirstChild("SoloV1_Main")
+    if existingGui then 
+        existingGui:Destroy() 
+    end
 
     local MainUI = Instance.new("ScreenGui")
     MainUI.Name = "SoloV1_Main"
@@ -417,106 +536,121 @@ local function InitCheat()
     
     local Frame = Instance.new("Frame")
     Frame.Name = "MainFrame"
-    Frame.Parent = MainUI
     Frame.Size = UDim2.new(0, 560, 0, 450)
     Frame.Position = UDim2.new(0.5, -280, 0.5, -225)
     Frame.BackgroundColor3 = Config.BgColor
     Frame.ClipsDescendants = true
+    Frame.Parent = MainUI
     
     local FrameCorner = Instance.new("UICorner")
     FrameCorner.Parent = Frame
     
     local Stroke = Instance.new("UIStroke")
-    Stroke.Parent = Frame
     Stroke.Color = Config.AccentColor
     Stroke.Thickness = 1.5
+    Stroke.Parent = Frame
+    
     MakeDraggable(Frame)
 
     local TopBar = Instance.new("Frame")
     TopBar.Name = "TopBar"
-    TopBar.Parent = Frame
     TopBar.Size = UDim2.new(1, 0, 0, 35)
     TopBar.BackgroundColor3 = Config.SecColor
+    TopBar.Parent = Frame
     
     local TopBarCorner = Instance.new("UICorner")
     TopBarCorner.Parent = TopBar
+    
     MakeDraggable(TopBar, Frame)
     
     local Title = Instance.new("TextLabel")
-    Title.Parent = TopBar
+    Title.Name = "TitleLabel"
     Title.Size = UDim2.new(1, 0, 1, 0)
     Title.BackgroundTransparency = 1
     Title.Text = "  SoloCheat - V1 PRO (RIVALS)"
     Title.TextColor3 = Color3.new(1, 1, 1)
     Title.Font = Enum.Font.GothamBold
     Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Parent = TopBar
 
     local CloseBtn = Instance.new("TextButton")
-    CloseBtn.Parent = TopBar
+    CloseBtn.Name = "CloseButton"
     CloseBtn.Size = UDim2.new(0, 35, 0, 35)
     CloseBtn.Position = UDim2.new(1, -35, 0, 0)
     CloseBtn.BackgroundTransparency = 1
     CloseBtn.Text = "X"
     CloseBtn.TextColor3 = Color3.fromRGB(255, 60, 60)
     CloseBtn.Font = Enum.Font.GothamBold
-    CloseBtn.MouseButton1Click:Connect(function() MainUI:Destroy() end)
+    CloseBtn.Parent = TopBar
+    
+    CloseBtn.MouseButton1Click:Connect(function() 
+        MainUI:Destroy() 
+    end)
 
     local Sidebar = Instance.new("Frame")
     Sidebar.Name = "Sidebar"
-    Sidebar.Parent = Frame
     Sidebar.Size = UDim2.new(0, 140, 1, -40)
     Sidebar.Position = UDim2.new(0, 0, 0, 40)
     Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    Sidebar.Parent = Frame
     
     local SidebarCorner = Instance.new("UICorner")
     SidebarCorner.Parent = Sidebar
     
     local SideLayout = Instance.new("UIListLayout")
-    SideLayout.Parent = Sidebar
     SideLayout.Padding = UDim.new(0, 5)
     SideLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     SideLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    SideLayout.Parent = Sidebar
 
     local Container = Instance.new("Frame")
     Container.Name = "Container"
-    Container.Parent = Frame
     Container.Size = UDim2.new(1, -150, 1, -50)
     Container.Position = UDim2.new(0, 145, 0, 45)
     Container.BackgroundTransparency = 1
+    Container.Parent = Frame
 
     local function CreateTab(name, layoutOrder)
         local TabBtn = Instance.new("TextButton")
-        TabBtn.Parent = Sidebar
         TabBtn.Size = UDim2.new(0.9, 0, 0, 35)
         TabBtn.BackgroundColor3 = Config.SecColor
         TabBtn.Text = name
         TabBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
         TabBtn.Font = Enum.Font.Gotham
         TabBtn.LayoutOrder = layoutOrder
+        TabBtn.Parent = Sidebar
         
         local TabBtnCorner = Instance.new("UICorner")
         TabBtnCorner.Parent = TabBtn
         
         local Page = Instance.new("ScrollingFrame")
-        Page.Parent = Container
         Page.Size = UDim2.new(1, 0, 1, 0)
         Page.BackgroundTransparency = 1
         Page.Visible = false
         Page.ScrollBarThickness = 2
         Page.CanvasSize = UDim2.new(0, 0, 3, 0)
+        Page.Parent = Container
         
         local PageLayout = Instance.new("UIListLayout")
-        PageLayout.Parent = Page
         PageLayout.Padding = UDim.new(0, 8)
         PageLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        PageLayout.Parent = Page
 
         TabBtn.MouseButton1Click:Connect(function()
-            for _, v in pairs(Container:GetChildren()) do 
-                if v:IsA("ScrollingFrame") then v.Visible = false end
+            local containerChildren = Container:GetChildren()
+            for _, v in pairs(containerChildren) do 
+                if v:IsA("ScrollingFrame") then 
+                    v.Visible = false 
+                end
             end
-            for _, b in pairs(Sidebar:GetChildren()) do 
-                if b:IsA("TextButton") then b.TextColor3 = Color3.fromRGB(150, 150, 150) end 
+            
+            local sidebarChildren = Sidebar:GetChildren()
+            for _, b in pairs(sidebarChildren) do 
+                if b:IsA("TextButton") then 
+                    b.TextColor3 = Color3.fromRGB(150, 150, 150) 
+                end 
             end
+            
             Page.Visible = true
             TabBtn.TextColor3 = Config.AccentColor
         end)
@@ -526,16 +660,15 @@ local function InitCheat()
 
     local function AddToggle(parent, text, configKey, layoutOrder)
         local ToggleFrame = Instance.new("Frame")
-        ToggleFrame.Parent = parent
         ToggleFrame.Size = UDim2.new(1, -10, 0, 40)
         ToggleFrame.BackgroundColor3 = Config.SecColor
         ToggleFrame.LayoutOrder = layoutOrder
+        ToggleFrame.Parent = parent
         
         local Corner = Instance.new("UICorner")
         Corner.Parent = ToggleFrame
         
         local Label = Instance.new("TextLabel")
-        Label.Parent = ToggleFrame
         Label.Size = UDim2.new(1, -50, 1, 0)
         Label.Position = UDim2.new(0, 10, 0, 0)
         Label.BackgroundTransparency = 1
@@ -543,21 +676,33 @@ local function InitCheat()
         Label.TextColor3 = Color3.new(1, 1, 1)
         Label.Font = Enum.Font.Gotham
         Label.TextXAlignment = Enum.TextXAlignment.Left
+        Label.Parent = ToggleFrame
         
         local Btn = Instance.new("TextButton")
-        Btn.Parent = ToggleFrame
         Btn.Size = UDim2.new(0, 35, 0, 18)
         Btn.Position = UDim2.new(1, -45, 0.5, -9)
         Btn.Text = ""
-        Btn.BackgroundColor3 = Config[configKey] and Config.AccentColor or Color3.fromRGB(50, 50, 50)
+        
+        if Config[configKey] then
+            Btn.BackgroundColor3 = Config.AccentColor
+        else
+            Btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        end
+        
+        Btn.Parent = ToggleFrame
         
         local BtnCorner = Instance.new("UICorner")
-        BtnCorner.Parent = Btn
         BtnCorner.CornerRadius = UDim.new(1, 0)
+        BtnCorner.Parent = Btn
         
         Btn.MouseButton1Click:Connect(function() 
             Config[configKey] = not Config[configKey]
-            Btn.BackgroundColor3 = Config[configKey] and Config.AccentColor or Color3.fromRGB(50, 50, 50) 
+            
+            if Config[configKey] then
+                Btn.BackgroundColor3 = Config.AccentColor
+            else
+                Btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            end
         end)
         
         UIElements.Toggles[configKey] = Btn
@@ -565,16 +710,15 @@ local function InitCheat()
 
     local function AddHotkey(parent, text, configKey, layoutOrder)
         local KeyFrame = Instance.new("Frame")
-        KeyFrame.Parent = parent
         KeyFrame.Size = UDim2.new(1, -10, 0, 40)
         KeyFrame.BackgroundColor3 = Config.SecColor
         KeyFrame.LayoutOrder = layoutOrder
+        KeyFrame.Parent = parent
         
         local Corner = Instance.new("UICorner")
         Corner.Parent = KeyFrame
         
         local Label = Instance.new("TextLabel")
-        Label.Parent = KeyFrame
         Label.Size = UDim2.new(1, -100, 1, 0)
         Label.Position = UDim2.new(0, 10, 0, 0)
         Label.BackgroundTransparency = 1
@@ -582,15 +726,16 @@ local function InitCheat()
         Label.TextColor3 = Color3.new(1, 1, 1)
         Label.Font = Enum.Font.Gotham
         Label.TextXAlignment = Enum.TextXAlignment.Left
+        Label.Parent = KeyFrame
         
         local Btn = Instance.new("TextButton")
-        Btn.Parent = KeyFrame
         Btn.Size = UDim2.new(0, 80, 0, 25)
         Btn.Position = UDim2.new(1, -90, 0.5, -12.5)
         Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
         Btn.Text = Config[configKey].Name
         Btn.TextColor3 = Config.AccentColor
         Btn.Font = Enum.Font.GothamBold
+        Btn.Parent = KeyFrame
         
         local BtnCorner = Instance.new("UICorner")
         BtnCorner.Parent = Btn
@@ -629,19 +774,23 @@ local function InitCheat()
 
     -- ONGLET MOVEMENT
     local SpeedBtn = Instance.new("TextButton")
-    SpeedBtn.Parent = TabMovement
     SpeedBtn.Size = UDim2.new(1, -10, 0, 40)
     SpeedBtn.BackgroundColor3 = Config.SecColor
     SpeedBtn.Text = "TOGGLE SPEED (45)"
     SpeedBtn.TextColor3 = Color3.new(1, 1, 1)
     SpeedBtn.Font = Enum.Font.Gotham
     SpeedBtn.LayoutOrder = 1
+    SpeedBtn.Parent = TabMovement
     
     local SpeedCorner = Instance.new("UICorner")
     SpeedCorner.Parent = SpeedBtn
     
     SpeedBtn.MouseButton1Click:Connect(function() 
-        Config.WalkSpeedValue = (Config.WalkSpeedValue == 16) and 45 or 16 
+        if Config.WalkSpeedValue == 16 then
+            Config.WalkSpeedValue = 45
+        else
+            Config.WalkSpeedValue = 16
+        end
     end)
 
     AddToggle(TabMovement, "FLY MODE (CFRAME)", "Fly", 2)
@@ -650,7 +799,6 @@ local function InitCheat()
 
     -- ONGLET SKINCHANGER (EconRCO)
     local SkinLabel = Instance.new("TextLabel")
-    SkinLabel.Parent = TabSkin
     SkinLabel.Size = UDim2.new(1, -10, 0, 50)
     SkinLabel.BackgroundTransparency = 1
     SkinLabel.Text = "RIVALS SKINCHANGER SYSTEM (ECON)"
@@ -658,23 +806,28 @@ local function InitCheat()
     SkinLabel.Font = Enum.Font.GothamBold
     SkinLabel.TextWrapped = true
     SkinLabel.LayoutOrder = 1
+    SkinLabel.Parent = TabSkin
 
     local RunSkinBtn = Instance.new("TextButton")
-    RunSkinBtn.Parent = TabSkin
     RunSkinBtn.Size = UDim2.new(1, -10, 0, 45)
     RunSkinBtn.BackgroundColor3 = Config.AccentColor
     RunSkinBtn.Text = "ACTIVER LE SKINCHANGER"
     RunSkinBtn.TextColor3 = Color3.new(1, 1, 1)
     RunSkinBtn.Font = Enum.Font.GothamBold
     RunSkinBtn.LayoutOrder = 2
+    RunSkinBtn.Parent = TabSkin
     
     local RunSkinCorner = Instance.new("UICorner")
     RunSkinCorner.Parent = RunSkinBtn
 
     RunSkinBtn.MouseButton1Click:Connect(function()
         RunSkinBtn.Text = "CHARGEMENT..."
+        
         local success, err = pcall(function()
-            loadstring(game:HttpGet('https://raw.githubusercontent.com/EconRCO/Econ/refs/heads/main/Init'))()
+            local url = "https://raw.githubusercontent.com/EconRCO/Econ/refs/heads/main/Init"
+            local code = game:HttpGet(url)
+            local func = loadstring(code)
+            func()
         end)
         
         if success then 
@@ -688,86 +841,97 @@ local function InitCheat()
 
     -- ONGLET SETTINGS
     local ConfigTitle = Instance.new("TextLabel")
-    ConfigTitle.Parent = TabSettings
     ConfigTitle.Size = UDim2.new(1, -10, 0, 20)
     ConfigTitle.BackgroundTransparency = 1
     ConfigTitle.Text = "CONFIG MANAGER"
     ConfigTitle.TextColor3 = Config.AccentColor
     ConfigTitle.Font = Enum.Font.GothamBold
     ConfigTitle.LayoutOrder = 1
+    ConfigTitle.Parent = TabSettings
 
     local ConfigContainer = Instance.new("Frame")
-    ConfigContainer.Parent = TabSettings
     ConfigContainer.Size = UDim2.new(1, -10, 0, 90)
     ConfigContainer.BackgroundColor3 = Config.SecColor
     ConfigContainer.LayoutOrder = 2
     ConfigContainer.ClipsDescendants = true
+    ConfigContainer.Parent = TabSettings
     
     local ConfigCorner = Instance.new("UICorner")
     ConfigCorner.Parent = ConfigContainer
     
     local ConfigBox = Instance.new("TextBox")
-    ConfigBox.Parent = ConfigContainer
     ConfigBox.Size = UDim2.new(0.6, -5, 0, 30)
     ConfigBox.Position = UDim2.new(0, 10, 0, 10)
     ConfigBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     ConfigBox.TextColor3 = Color3.new(1, 1, 1)
     ConfigBox.PlaceholderText = "Nom de la config..."
-    ConfigBox.Text = ConfigData.LastConfig ~= "Default" and ConfigData.LastConfig or ""
+    
+    if ConfigData.LastConfig ~= "Default" then
+        ConfigBox.Text = ConfigData.LastConfig
+    else
+        ConfigBox.Text = ""
+    end
+    
     ConfigBox.Font = Enum.Font.Gotham
+    ConfigBox.Parent = ConfigContainer
     
     local ConfigBoxCorner = Instance.new("UICorner")
     ConfigBoxCorner.Parent = ConfigBox
 
     local SaveConfigBtn = Instance.new("TextButton")
-    SaveConfigBtn.Parent = ConfigContainer
     SaveConfigBtn.Size = UDim2.new(0.4, -25, 0, 30)
     SaveConfigBtn.Position = UDim2.new(0.6, 15, 0, 10)
     SaveConfigBtn.BackgroundColor3 = Config.AccentColor
     SaveConfigBtn.Text = "SAUVEGARDER"
     SaveConfigBtn.TextColor3 = Color3.new(1, 1, 1)
     SaveConfigBtn.Font = Enum.Font.GothamBold
+    SaveConfigBtn.Parent = ConfigContainer
     
     local SaveConfigCorner = Instance.new("UICorner")
     SaveConfigCorner.Parent = SaveConfigBtn
 
     local DropdownBtn = Instance.new("TextButton")
-    DropdownBtn.Parent = ConfigContainer
     DropdownBtn.Size = UDim2.new(1, -20, 0, 30)
     DropdownBtn.Position = UDim2.new(0, 10, 0, 50)
     DropdownBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     DropdownBtn.Text = "CONFIG : " .. ConfigData.LastConfig .. " ▼"
     DropdownBtn.TextColor3 = Color3.new(1, 1, 1)
     DropdownBtn.Font = Enum.Font.GothamBold
+    DropdownBtn.Parent = ConfigContainer
     
     local DropdownCorner = Instance.new("UICorner")
     DropdownCorner.Parent = DropdownBtn
 
     local DropdownList = Instance.new("ScrollingFrame")
-    DropdownList.Parent = ConfigContainer
     DropdownList.Size = UDim2.new(1, -20, 0, 80)
     DropdownList.Position = UDim2.new(0, 10, 0, 85)
     DropdownList.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     DropdownList.Visible = false
     DropdownList.ScrollBarThickness = 2
+    DropdownList.Parent = ConfigContainer
     
     local DropdownListLayout = Instance.new("UIListLayout")
-    DropdownListLayout.Parent = DropdownList
     DropdownListLayout.Padding = UDim.new(0, 2)
+    DropdownListLayout.Parent = DropdownList
 
     local function PopulateDropdown()
-        for _, v in pairs(DropdownList:GetChildren()) do
-            if v:IsA("TextButton") then v:Destroy() end
+        local listChildren = DropdownList:GetChildren()
+        for _, v in pairs(listChildren) do
+            if v:IsA("TextButton") then 
+                v:Destroy() 
+            end
         end
+        
         local ySize = 0
+        
         for profileName, _ in pairs(ConfigData.Profiles) do
             local itemBtn = Instance.new("TextButton")
-            itemBtn.Parent = DropdownList
             itemBtn.Size = UDim2.new(1, 0, 0, 25)
             itemBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
             itemBtn.Text = profileName
             itemBtn.TextColor3 = Color3.new(1, 1, 1)
             itemBtn.Font = Enum.Font.Gotham
+            itemBtn.Parent = DropdownList
             
             itemBtn.MouseButton1Click:Connect(function()
                 ApplyConfigProfile(profileName)
@@ -776,63 +940,74 @@ local function InitCheat()
                 DropdownBtn.Text = "CONFIG : " .. profileName .. " ▼"
                 DropdownList.Visible = false
                 
-                TweenService:Create(ConfigContainer, TweenInfo.new(0.2), {Size = UDim2.new(1, -10, 0, 90)}):Play()
+                local tweenInfo = TweenInfo.new(0.2)
+                local goal = {Size = UDim2.new(1, -10, 0, 90)}
+                TweenService:Create(ConfigContainer, tweenInfo, goal):Play()
             end)
+            
             ySize = ySize + 27
         end
+        
         DropdownList.CanvasSize = UDim2.new(0, 0, 0, ySize)
     end
 
     SaveConfigBtn.MouseButton1Click:Connect(function()
         local name = ConfigBox.Text
-        if name and name ~= "" then
-            SaveCurrentToProfile(name)
-            PopulateDropdown()
-            DropdownBtn.Text = "CONFIG : " .. name .. " ▼"
-            SaveConfigBtn.Text = "OK!"
-            task.wait(1)
-            SaveConfigBtn.Text = "SAUVEGARDER"
+        if name then
+            if name ~= "" then
+                SaveCurrentToProfile(name)
+                PopulateDropdown()
+                DropdownBtn.Text = "CONFIG : " .. name .. " ▼"
+                SaveConfigBtn.Text = "OK!"
+                task.wait(1)
+                SaveConfigBtn.Text = "SAUVEGARDER"
+            end
         end
     end)
 
     DropdownBtn.MouseButton1Click:Connect(function()
         DropdownList.Visible = not DropdownList.Visible
+        
         if DropdownList.Visible then
             PopulateDropdown()
-            TweenService:Create(ConfigContainer, TweenInfo.new(0.2), {Size = UDim2.new(1, -10, 0, 175)}):Play()
+            local tweenInfo = TweenInfo.new(0.2)
+            local goal = {Size = UDim2.new(1, -10, 0, 175)}
+            TweenService:Create(ConfigContainer, tweenInfo, goal):Play()
         else
-            TweenService:Create(ConfigContainer, TweenInfo.new(0.2), {Size = UDim2.new(1, -10, 0, 90)}):Play()
+            local tweenInfo = TweenInfo.new(0.2)
+            local goal = {Size = UDim2.new(1, -10, 0, 90)}
+            TweenService:Create(ConfigContainer, tweenInfo, goal):Play()
         end
     end)
 
     local BindsTitle = Instance.new("TextLabel")
-    BindsTitle.Parent = TabSettings
     BindsTitle.Size = UDim2.new(1, -10, 0, 20)
     BindsTitle.BackgroundTransparency = 1
     BindsTitle.Text = "RACCOURCIS"
     BindsTitle.TextColor3 = Config.AccentColor
     BindsTitle.Font = Enum.Font.GothamBold
     BindsTitle.LayoutOrder = 3
+    BindsTitle.Parent = TabSettings
 
     AddHotkey(TabSettings, "MENU BIND", "MenuKey", 4)
     AddHotkey(TabSettings, "TELEPORT BIND", "TP_Key", 5)
 
     local DiscFrame = Instance.new("Frame")
-    DiscFrame.Parent = TabSettings
     DiscFrame.Size = UDim2.new(1, -10, 0, 40)
     DiscFrame.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
     DiscFrame.LayoutOrder = 6
+    DiscFrame.Parent = TabSettings
     
     local DiscCorner = Instance.new("UICorner")
     DiscCorner.Parent = DiscFrame
     
     local DiscBtn = Instance.new("TextButton")
-    DiscBtn.Parent = DiscFrame
     DiscBtn.Size = UDim2.new(1, 0, 1, 0)
     DiscBtn.BackgroundTransparency = 1
     DiscBtn.Text = "COPY DISCORD LINK"
     DiscBtn.TextColor3 = Color3.new(1, 1, 1)
     DiscBtn.Font = Enum.Font.GothamBold
+    DiscBtn.Parent = DiscFrame
     
     DiscBtn.MouseButton1Click:Connect(function() 
         setclipboard(Config.Discord)
@@ -842,13 +1017,26 @@ local function InitCheat()
     end)
 
     UIS.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
-        if input.KeyCode == Config.TP_Key and LocalPlayer.Character then 
-            local rootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if rootPart then rootPart.CFrame = Mouse.Hit * CFrame.new(0, 3, 0) end
+        if gameProcessed then 
+            return 
         end
-        if input.KeyCode == Config.MenuKey and CoreGui:FindFirstChild("SoloV1_Main") then 
-            Frame.Visible = not Frame.Visible 
+        
+        if input.KeyCode == Config.TP_Key then
+            if LocalPlayer.Character then 
+                local rootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if rootPart then 
+                    local hitCFrame = Mouse.Hit
+                    local offsetCFrame = CFrame.new(0, 3, 0)
+                    rootPart.CFrame = hitCFrame * offsetCFrame 
+                end
+            end
+        end
+        
+        if input.KeyCode == Config.MenuKey then
+            local mainGuiCheck = CoreGui:FindFirstChild("SoloV1_Main")
+            if mainGuiCheck then 
+                Frame.Visible = not Frame.Visible 
+            end
         end
     end)
 
@@ -863,46 +1051,54 @@ end
 -- [[ 8. SYSTEME DE CLE & SAUVEGARDE ]]       --
 -- ========================================== --
 local function InitKeySystem()
-    if isfile and isfile(Config.KeyFileName) then
-        if readfile(Config.KeyFileName) == Config.CorrectKey then 
-            InitCheat() 
-            return 
+    if isfile then
+        if isfile(Config.KeyFileName) then
+            if readfile then
+                local savedKey = readfile(Config.KeyFileName)
+                if savedKey == Config.CorrectKey then 
+                    InitCheat() 
+                    return 
+                end
+            end
         end
     end
 
-    if CoreGui:FindFirstChild("SoloV1_Key") then CoreGui.SoloV1_Key:Destroy() end
+    local existingKeyGui = CoreGui:FindFirstChild("SoloV1_Key")
+    if existingKeyGui then 
+        existingKeyGui:Destroy() 
+    end
     
     local KeyUI = Instance.new("ScreenGui")
     KeyUI.Name = "SoloV1_Key"
     KeyUI.Parent = CoreGui
     
     local KFrame = Instance.new("Frame")
-    KFrame.Parent = KeyUI
     KFrame.Size = UDim2.new(0, 450, 0, 300)
     KFrame.Position = UDim2.new(0.5, -225, 0.5, -150)
     KFrame.BackgroundColor3 = Config.BgColor
     KFrame.ClipsDescendants = true
+    KFrame.Parent = KeyUI
     
     local KCorner = Instance.new("UICorner")
     KCorner.Parent = KFrame
     
     local KStroke = Instance.new("UIStroke")
-    KStroke.Parent = KFrame
     KStroke.Color = Config.AccentColor
     KStroke.Thickness = 1.5
+    KStroke.Parent = KFrame
+    
     MakeDraggable(KFrame)
 
     local KTitle = Instance.new("TextLabel")
-    KTitle.Parent = KFrame
     KTitle.Size = UDim2.new(1, 0, 0, 60)
     KTitle.BackgroundTransparency = 1
     KTitle.Text = "SoloCheat"
     KTitle.TextColor3 = Config.AccentColor
     KTitle.Font = Enum.Font.GothamBold
     KTitle.TextSize = 25
+    KTitle.Parent = KFrame
 
     local KBox = Instance.new("TextBox")
-    KBox.Parent = KFrame
     KBox.Size = UDim2.new(0.8, 0, 0, 45)
     KBox.Position = UDim2.new(0.1, 0, 0.35, 0)
     KBox.BackgroundColor3 = Config.SecColor
@@ -910,37 +1106,41 @@ local function InitKeySystem()
     KBox.PlaceholderText = "Collez la clé ici..."
     KBox.Text = ""
     KBox.Font = Enum.Font.Gotham
+    KBox.Parent = KFrame
     
     local KBoxCorner = Instance.new("UICorner")
     KBoxCorner.Parent = KBox
 
     local ValidBtn = Instance.new("TextButton")
-    ValidBtn.Parent = KFrame
     ValidBtn.Size = UDim2.new(0.4, -5, 0, 40)
     ValidBtn.Position = UDim2.new(0.1, 0, 0.65, 0)
     ValidBtn.BackgroundColor3 = Config.AccentColor
     ValidBtn.Text = "VALIDER V1"
     ValidBtn.TextColor3 = Color3.new(1, 1, 1)
     ValidBtn.Font = Enum.Font.GothamBold
+    ValidBtn.Parent = KFrame
     
     local ValidCorner = Instance.new("UICorner")
     ValidCorner.Parent = ValidBtn
 
     local GetKeyBtn = Instance.new("TextButton")
-    GetKeyBtn.Parent = KFrame
     GetKeyBtn.Size = UDim2.new(0.4, -5, 0, 40)
     GetKeyBtn.Position = UDim2.new(0.5, 5, 0.65, 0)
     GetKeyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     GetKeyBtn.Text = "[ Get Key ]"
     GetKeyBtn.TextColor3 = Color3.new(1, 1, 1)
     GetKeyBtn.Font = Enum.Font.GothamBold
+    GetKeyBtn.Parent = KFrame
     
     local GetKeyCorner = Instance.new("UICorner")
     GetKeyCorner.Parent = GetKeyBtn
 
     ValidBtn.MouseButton1Click:Connect(function()
-        if KBox.Text == Config.CorrectKey then
-            if writefile then writefile(Config.KeyFileName, KBox.Text) end
+        local inputText = KBox.Text
+        if inputText == Config.CorrectKey then
+            if writefile then 
+                writefile(Config.KeyFileName, inputText) 
+            end
             KeyUI:Destroy()
             InitCheat()
         else
