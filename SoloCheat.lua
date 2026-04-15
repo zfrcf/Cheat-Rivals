@@ -260,12 +260,27 @@ end
 -- [[ 5. LOGIQUE PRINCIPALE & ESP ]]          --
 -- ========================================== --
 local function StartCoreLogic()
-    local FOVCircle = Drawing.new("Circle")
-    FOVCircle.Thickness = 1
-    FOVCircle.Color = Config.AccentColor
-    FOVCircle.Transparency = 1
-    FOVCircle.Visible = false
-
+if Config.Silent then
+    if UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+        local t = GetClosestTargetByDistance()
+        if t then
+            -- Calcul de la position à atteindre
+            local pos = Camera:WorldToViewportPoint(t.Position)
+            local mouseLoc = UIS:GetMouseLocation()
+            
+            -- Utilisation de mousemoverel pour un mouvement relatif fluide sans conflit
+            local moveX = (pos.X - mouseLoc.X)
+            local moveY = (pos.Y - mouseLoc.Y)
+            
+            if mousemoverel then
+                mousemoverel(moveX, moveY)
+            elseif getgenv().mousemoverel then
+                getgenv().mousemoverel(moveX, moveY)
+            end
+        end
+    end
+end
+    
     RunService.RenderStepped:Connect(function()
         local mainGui = CoreGui:FindFirstChild("SoloV1_Main")
         
