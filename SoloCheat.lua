@@ -735,6 +735,7 @@ local function InitCheat()
     AddToggle(TabCombat, "SILENT AIM (MOUSE2)", "Silent", 2)
     AddToggle(TabCombat, "TP KILL (AUTO-EXECUTE)", "TPKill", 3)
     AddToggle(TabCombat, "SHOW FOV CIRCLE", "ShowFOV", 4)
+    AddSlider(TabCombat, "RAYON DU FOV", 50, 800, "FOV", 5)
 
     -- ONGLET VISUALS
     AddToggle(TabVisuals, "ESP BOXES", "ESP_Box", 1)
